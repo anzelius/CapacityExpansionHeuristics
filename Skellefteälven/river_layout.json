@@ -1,0 +1,95 @@
+{
+    "name": "Skellefteälven",
+    "plants": [
+        {
+            "name": "Rebnis",
+            "x": 0,
+            "y": 0.3
+        },
+        {
+            "name": "Sädva",
+            "x": 0.05,
+            "y": 0.58
+        },
+        {
+            "name": "Hornavan",
+            "x": 0.1,
+            "y": 0.45
+        },
+        {
+            "name": "Bergnäs",
+            "x": 0.15,
+            "y": 0.5
+        },
+        {
+            "name": "Slagnäs",
+            "x": 0.22,
+            "y": 0.55
+        },
+        {
+            "name": "Bastusel",
+            "x": 0.28,
+            "y": 0.6
+        },
+        {
+            "name": "Grytfors",
+            "x": 0.35,
+            "y": 0.62
+        },
+        {
+            "name": "Gallejaur",
+            "x": 0.4,
+            "y": 0.57
+        },
+        {
+            "name": "Vargfors",
+            "x": 0.45,
+            "y": 0.52
+        },
+        {
+            "name": "Rengård",
+            "x": 0.5,
+            "y": 0.45
+        },
+        {
+            "name": "Båtfors",
+            "x": 0.55,
+            "y": 0.41
+        },
+        {
+            "name": "Finnfors",
+            "x": 0.62,
+            "y": 0.40
+        },
+        {
+            "name": "Granfors",
+            "x": 0.7,
+            "y": 0.43
+        },
+        {
+            "name": "Krångfors",
+            "x": 0.77,
+            "y": 0.46
+        },
+        {
+            "name": "Selsfors",
+            "x": 0.82,
+            "y": 0.49
+        },
+        {
+            "name": "Kvistforsen",
+            "x": 0.88,
+            "y": 0.53
+        },
+        {
+            "name": "Bergsby",
+            "x": 0.95,
+            "y": 0.52
+        },
+        {
+            "name": "Hav",
+            "x": 1,
+            "y": 0.49
+        }
+    ]
+}

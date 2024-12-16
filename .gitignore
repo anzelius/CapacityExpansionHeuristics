@@ -1,0 +1,16 @@
+__pycache__
+**/results/
+# **/scenarios/
+**/*egg-info*
+build/
+**/optimization_queue.json
+**/optimization_queue.json.lock
+.env
+html-plots/
+venv/
+.idea/
+**/scenarios/**
+**/removed_scenarios/**
+**/webserver_logs/**
+**/python-venv/**
+launch.json
