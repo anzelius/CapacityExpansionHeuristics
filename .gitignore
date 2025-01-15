@@ -9,7 +9,7 @@ build/
 html-plots/
 venv/
 .idea/
-**/scenarios/**
+#**/scenarios/**
 **/removed_scenarios/**
 **/webserver_logs/**
 **/python-venv/**
