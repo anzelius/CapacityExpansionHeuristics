@@ -1,3 +1,6 @@
+import Pkg
+Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
+
 using JuMP, Gurobi, Ipopt, AxisArrays, UnPack, FileIO, Statistics,
       StatsPlots, Plots.PlotMeasures, Dates, FilePathsBase, CategoricalArrays
 using Plots: plot, plot!
@@ -99,7 +102,7 @@ end
 for r in rivers
     include("$DATAFOLDER/$r/plantinfo.jl")
     include("$DATAFOLDER/$r/turbineinfo.jl")
-    #include("$DATAFOLDER/$r/network.jl")
+    include("$DATAFOLDER/$r/network.jl")
     for scenarios in scenarios[r]
         include("$DATAFOLDER/$r/scenarios/$scenarios/env_con.jl")
     end
@@ -116,7 +119,6 @@ modelversions = Dict(
 # model = ["Linear", "NonLinear"]
 # objective = ["Profit", "Load"]
 # scenario = ["Inga miljövillkor", "Dagens miljövillkor", "X miljövillkor", "Y miljövillkor", "Z miljövillkor"]
-
 function runmodel(river::Symbol, start_datetime::String, end_datetime::String, objective::String, model::String, scenario::String; recalc::NamedTuple=(;), save_variables=true, silent=true)
 
     type=modelversions[model].main.type
@@ -237,3 +239,5 @@ function setsolver(model, objective, solver)
         @error "No solver named $solver."
     end
 end
+
+#runmodel(:Skellefteälven, "2016-05-05T08", "2017-05-05T08", "Profit", "Linear", "Dagens miljövillkor", save_variables=false, silent=true)
