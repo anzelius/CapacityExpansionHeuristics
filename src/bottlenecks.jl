@@ -55,7 +55,6 @@ for river in rivers
     connections[river] = ConnectionsGraph(temp_dict_nodes[:Hav], temp_dict_nodes) 
 end 
 
-
 river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()  # river : [Dict(bottleneck plant : missing_discharge), ]
 # dfs in all river networks, mark all bottleneck plants for each river and their diff in discharge 
 # save to global variable? save to file? make function? 
@@ -129,24 +128,16 @@ for river in rivers # [:Skellefteälven]
             l = 0 
         end
 
-        # check 1
-        #max_discharge_along_river = check_detour(current_plant, tot_discharge_upstream)
-
-        #max_discharge_along_river = max(tot_discharge_upstream, max_discharge_along_river) # TODO: kolla upp varför hållits separata 
         if current_plant.is_real_plant 
             plant_discharge = current_plant.discharge 
             if plant_discharge < max_discharge_along_river 
                 max_discharge_along_river, detour_nodes = check_detour(current_plant, max_discharge_along_river)
-                #if check_children_split(current_plant, max_discharge_along_river)
-                #    max_discharge_along_river = plant_discharge  
-                #else 
                 if plant_discharge < max_discharge_along_river 
                     max_discharge_along_river = children_split(current_plant, max_discharge_along_river, detour_nodes)
                 end 
                 if plant_discharge < max_discharge_along_river 
                     plant_bottleneck_value[current_plant.name] = max_discharge_along_river - plant_discharge
                 end 
-                #end 
             else 
                 max_discharge_along_river = plant_discharge
             end  
@@ -163,6 +154,8 @@ for river in rivers # [:Skellefteälven]
 
     dfs(connections[river].head)  
     river_bottlenecks[river] = plant_bottleneck_value
+    #println(river)
+    #println("$(length(river_bottlenecks[river])) / $(length(dp_max_discharge))")
 end 
 
 

@@ -1,0 +1,162 @@
+using Base: searchsortedfirst
+
+include("FORSA.jl")
+include("bottlenecks.jl") 
+
+# list all turbines in order of max discharge for binary search 
+sorted_turbines = []
+for river in rivers
+    for turbine in TURBINEINFO[river] 
+        index = searchsortedfirst([t.maxdischarge for t in sorted_turbines], turbine.maxdischarge)
+        insert!(sorted_turbines, index, turbine)
+    end 
+end 
+
+function search_two_turbines(target)
+    left = 1
+    right = length(sorted_turbines)
+    
+    while left < right
+        sum_discharge = sorted_turbines[left].maxdischarge + sorted_turbines[right].maxdischarge
+        
+        if sum_discharge == target
+            return (sorted_turbines[left], sorted_turbines[right]) 
+        elseif sum_discharge < target
+            left += 1  
+        else
+            right -= 1  
+        end
+    end
+    return nothing 
+end 
+
+function build_from_existing_turbines(target_turbine, plant_name, river)
+    index = findfirst(t -> t.name == plant_name, PLANTINFO[river])
+    turbine_nr = PLANTINFO[river][index].nr_turbines + 1
+    PLANTINFO[river][index].nr_turbines = turbine_nr 
+    new_turbine = Turbine((plant_name, turbine_nr), target_turbine.maxdischarge, target_turbine.meandischarge, target_turbine.meaneta, target_turbine.etapoints)
+    return new_turbine 
+end  
+
+function build_artificial_effective_discharge_turbine(plant_name, river, missing_discharge)
+    index = findfirst(t -> t.name == plant_name, PLANTINFO[river])
+    turbine_nr = PLANTINFO[river][index].nr_turbines + 1
+    PLANTINFO[river][index].nr_turbines = turbine_nr 
+    # TODO: this function is not finished.. 
+    return new_turbine 
+end 
+
+
+# input river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()  
+# river : Dict(bottleneck plant : missing_discharge)
+# river_bottlenecks::Dict{Symbol, Dict{Symbol, Int64}}
+# reduce bottlenecks by adding any type of new turbine matching the required discharge 
+function add_bottleneck_turbines()
+    for river in rivers 
+        if haskey(river_bottlenecks, river)
+            for (plant_name, missing_discharge) in river_bottlenecks[river]
+                
+                index = searchsortedfirst([t.maxdischarge for t in sorted_turbines], missing_discharge)
+    
+                if index <= length(sorted_turbines) && sorted_turbines[index].maxdischarge == missing_discharge
+                    target_turbine = sorted_turbines[index]
+                    new_turbine = build_from_existing_turbines(target_turbine, plant_name, river)
+                    push!(TURBINEINFO[river], new_turbine)
+                else 
+                    result = search_two_turbines(missing_discharge)
+                    if result !== nothing
+                        target_turbine1, target_turbine2 = result 
+                        new_turbine1 = build_from_existing_turbines(target_turbine1, plant_name, river)
+                        new_turbine2 = build_from_existing_turbines(target_turbine2, plant_name, river)
+                        push!(TURBINEINFO[river], new_turbine1)
+                        push!(TURBINEINFO[river], new_turbine2) 
+                    else 
+                        nothing 
+                        #println(missing_discharge) only the ones with -1 
+                        #new_turbine = build_artificial_effective_discharge_turbine(plant_name, river, missing_discharge)
+                        #push!(TURBINEINFO[river], new_turbine)
+                    end 
+                end 
+            end  
+        end  
+    end 
+end 
+
+function largest_smaller_than_or_equal(sorted_list, threshold)
+    idx = searchsortedfirst([t.maxdischarge for t in sorted_turbines], threshold)  
+    if idx <= length(sorted_list) && sorted_list[idx].maxdischarge == threshold
+        return sorted_list[idx]  
+    end
+    return idx > 1 ? sorted_list[idx - 1] : nothing  
+end
+
+# reduce bottlenecks by increasing max_discharge and adding similar turbines  
+function reduce_bottlenecks()
+    threshold_discharge_increase = 0.2 
+    threshold_plant_diff = 0.35 
+    for river in rivers 
+        if haskey(river_bottlenecks, river)
+            for (plant_name, missing_discharge) in river_bottlenecks[river]
+                plant_turbines = [plant_turbine for plant_turbine in TURBINEINFO[river] if plant_turbine.name_nr[1] == plant_name]
+                plant_turbines = sort(plant_turbines, by=t -> t.maxdischarge, rev=true)
+                
+                # try first adding turbines of similar models as existing 
+                while true 
+                    @label start 
+                    for plant_turbine in plant_turbines
+                        if plant_turbine.maxdischarge <= missing_discharge
+                            new_turbine = build_from_existing_turbines(plant_turbine, plant_name, river)
+                            push!(plant_turbines, new_turbine) 
+                            missing_discharge -= new_turbine.maxdischarge
+                            println("New turbine for $river : $plant_name")
+                            @goto start  
+                        end 
+                    end 
+                    q_plant_turbines = [abs(missing_discharge -  plant_turbine.maxdischarge) / plant_turbine.maxdischarge for plant_turbine in plant_turbines]
+                    if all(x -> x > threshold_plant_diff, q_plant_turbines)
+                        break 
+                    end 
+                    for plant_turbine in plant_turbines, q in q_plant_turbines
+                        if q  < threshold_plant_diff
+                            new_turbine = largest_smaller_than_or_equal(sorted_turbines, missing_discharge)
+                            if new_turbine !== nothing 
+                                new_turbine = build_from_existing_turbines(new_turbine, plant_name, river)
+                                push!(plant_turbines, new_turbine) 
+                                missing_discharge -= new_turbine.maxdischarge
+                                println("New turbine for $river : $plant_name") 
+                                break 
+                            end 
+                        end 
+                    end  
+                end 
+
+
+                while missing_discharge > 0
+                    if isempty(plant_turbines)
+                        # TODO: what to do with the excess discharge that's not handled? 
+                        println("over: $river : $plant_name : $missing_discharge")
+                        break 
+                    end 
+                    # increase discharge at existing turbines 
+                    plant_turbine = popfirst!(plant_turbines)
+                    q = missing_discharge / plant_turbine.maxdischarge
+                    if q < threshold_discharge_increase
+                        # increase discharge at plant turbine 
+                        plant_turbine.maxdischarge += missing_discharge
+                        println("increased discharge for: $river : $plant_name with $missing_discharge")
+                        missing_discharge -= missing_discharge 
+                    else
+                        #increase discharge at plant turbine 
+                        plant_turbine.maxdischarge += min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
+                        println("increased discharge for: $river : $plant_name with $(min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase)))")
+                        missing_discharge -= min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))  
+                    end  
+                end 
+            end 
+        end 
+    end 
+end 
+
+
+reduce_bottlenecks()
+

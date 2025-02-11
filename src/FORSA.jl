@@ -7,7 +7,7 @@ using Plots: plot, plot!
 
 export runmodel
 
-struct Plant
+mutable struct Plant
     name::Symbol
     nr_turbines::Int                        # nr
     ncap::Union{Int, Float64}               # nameplate capacity MW
