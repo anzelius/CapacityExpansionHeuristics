@@ -92,36 +92,47 @@ end
 
 # reduce bottlenecks by increasing max_discharge and adding similar turbines  
 function reduce_bottlenecks()
-    threshold_discharge_increase = 0.2 
-    threshold_plant_diff = 0.35 
+    threshold_discharge_increase = 0.1 
+    threshold_plant_diff = 0.35
+
     for river in rivers 
         if haskey(river_bottlenecks, river)
             for (plant_name, missing_discharge) in river_bottlenecks[river]
                 plant_turbines = [plant_turbine for plant_turbine in TURBINEINFO[river] if plant_turbine.name_nr[1] == plant_name]
                 plant_turbines = sort(plant_turbines, by=t -> t.maxdischarge, rev=true)
-                
-                # try first adding turbines of similar models as existing 
+                missing_discharge_save, plant_turbines_save = nothing, nothing 
+                TURBINEINFO_TEMP = []
+                # try first adding turbines 
                 while true 
                     @label start 
+                    # try adding turbines of same models 
                     for plant_turbine in plant_turbines
                         if plant_turbine.maxdischarge <= missing_discharge
                             new_turbine = build_from_existing_turbines(plant_turbine, plant_name, river)
                             push!(plant_turbines, new_turbine) 
                             missing_discharge -= new_turbine.maxdischarge
                             println("New turbine for $river : $plant_name")
+                            # TODO: add turbine  
+                            push!(TURBINEINFO[river], new_turbine)
                             @goto start  
                         end 
                     end 
+                    # save this state to go back to if other fails 
+                    missing_discharge_save = missing_discharge 
+                    plant_turbines_save = copy(plant_turbines)
+                    # try adding turbines of similar models (max diff. 35 %) 
                     q_plant_turbines = [abs(missing_discharge -  plant_turbine.maxdischarge) / plant_turbine.maxdischarge for plant_turbine in plant_turbines]
                     if all(x -> x > threshold_plant_diff, q_plant_turbines)
                         break 
                     end 
                     for plant_turbine in plant_turbines, q in q_plant_turbines
                         if q  < threshold_plant_diff
-                            new_turbine = largest_smaller_than_or_equal(sorted_turbines, missing_discharge)
-                            if new_turbine !== nothing 
-                                new_turbine = build_from_existing_turbines(new_turbine, plant_name, river)
+                            target_turbine = largest_smaller_than_or_equal(sorted_turbines, missing_discharge)
+                            if target_turbine !== nothing 
+                                new_turbine = build_from_existing_turbines(target_turbine, plant_name, river)
                                 push!(plant_turbines, new_turbine) 
+                                # TODO: add turbine to TURBINEINFO_TEMP 
+                                push!(TURBINEINFO_TEMP, new_turbine)
                                 missing_discharge -= new_turbine.maxdischarge
                                 println("New turbine for $river : $plant_name") 
                                 break 
@@ -129,29 +140,64 @@ function reduce_bottlenecks()
                         end 
                     end  
                 end 
-
-
+                
+                # then try increase discharge 
+                plant_discharge_to_increase = Dict{Turbine, Int64}() 
+                @label start2 
                 while missing_discharge > 0
                     if isempty(plant_turbines)
-                        # TODO: what to do with the excess discharge that's not handled? 
-                        println("over: $river : $plant_name : $missing_discharge")
-                        break 
+                        # if there is still missing discharge and not possible to increase discharge
+                        # at existing turbines, roll-back and add a smaller turbine  
+                        # TODO: add turbine          
+                        target_turbine = largest_smaller_than_or_equal(sorted_turbines, missing_discharge_save)
+                        if target_turbine !== nothing
+                            missing_discharge = missing_discharge_save
+                            empty!(TURBINEINFO_TEMP)
+                            empty!(plant_discharge_to_increase)
+                            new_turbine = build_from_existing_turbines(target_turbine, plant_name, river)
+                            missing_discharge -= new_turbine.maxdischarge
+                            plant_turbines = copy(plant_turbines_save) 
+                            push!(TURBINEINFO[river], new_turbine)
+                            push!(plant_turbines, new_turbine)
+                            println("trying again: $river : $plant_name , $missing_discharge")
+                            @goto start2 
+                        else
+                            println("Couldn't find turbine smaller than $missing_discharge_save")
+                            break 
+                        end 
                     end 
                     # increase discharge at existing turbines 
                     plant_turbine = popfirst!(plant_turbines)
                     q = missing_discharge / plant_turbine.maxdischarge
                     if q < threshold_discharge_increase
                         # increase discharge at plant turbine 
-                        plant_turbine.maxdischarge += missing_discharge
+                        # TODO: increase discharge at a temp turbine for now, then replace at the end 
+                        plant_discharge_to_increase[plant_turbine] = missing_discharge
+                        #plant_turbine.maxdischarge += missing_discharge
                         println("increased discharge for: $river : $plant_name with $missing_discharge")
                         missing_discharge -= missing_discharge 
                     else
                         #increase discharge at plant turbine 
-                        plant_turbine.maxdischarge += min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
+                        # TODO: increase discharge at a temp turbine for now, then replace at the end 
+                        #plant_turbine.maxdischarge += min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
+                        plant_discharge_to_increase[plant_turbine] = min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
                         println("increased discharge for: $river : $plant_name with $(min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase)))")
-                        missing_discharge -= min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))  
+                        missing_discharge -= min(missing_discharge, ceil(plant_turbine.maxdischarge * threshold_discharge_increase))  
                     end  
                 end 
+
+                # add turbines and missing discharge to turbines 
+                if !isempty(plant_discharge_to_increase) 
+                    for (plant, discharge_to_increase) in plant_discharge_to_increase
+                        plant.maxdischarge += discharge_to_increase
+                    end 
+                end
+
+                if !isempty(TURBINEINFO_TEMP)
+                    for new_turbine in TURBINEINFO_TEMP
+                        push!(TURBINEINFO[river], new_turbine)
+                    end  
+                end           
             end 
         end 
     end 
