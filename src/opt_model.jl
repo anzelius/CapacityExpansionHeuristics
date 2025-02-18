@@ -1,4 +1,5 @@
-function buildmodel(params, start_datetime, end_datetime, objective; type, power, e)
+
+function buildmodel(params, start_datetime, end_datetime, end_start_constraints, objective; type, power, e)
     println("\nBuilding model...")
     println("Start date & time = ", start_datetime)
     println("End date & time = ", end_datetime)
@@ -19,7 +20,8 @@ function buildmodel(params, start_datetime, end_datetime, objective; type, power
 
     println("Number of hours = ", length(date_TIME))
     println("type = ", type)
-
+    #end_levels_constraint = end_start_constraints ? reservoir_end[p] : 0
+    water_balance_constraint = end_start_constraints ? 1 : 2
     rivermodel = Model()
     
     @variables rivermodel begin
@@ -78,9 +80,9 @@ function buildmodel(params, start_datetime, end_datetime, objective; type, power
                 Utskov_flow[t,p,p2] >= Utskov_flow[dtshift(date_TIME, t, 1),p,p2] - ramp_down_utskov_flow[t,p,p2]
 
         Reservoir_final[p in PLANT],
-        	Reservoir_content[date_TIME[end],p] >= reservoir_end[p]
+        	Reservoir_content[date_TIME[end],p] >= (end_start_constraints ? reservoir_end[p] : 0)
         
-        Water_Balance[t in date_TIME, p in PLANT],
+        Water_Balance[t in date_TIME[water_balance_constraint:end], p in PLANT],
             Reservoir_content[t,p] == (t > date_TIME[1] ? Reservoir_content[dtshift(date_TIME, t, 1),p] : reservoir_start[p]) +
                 1 * (
                     + inflow[t,p]

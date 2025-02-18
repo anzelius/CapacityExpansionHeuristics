@@ -1,5 +1,5 @@
 import Pkg
-Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
+Pkg.activate("C:/Users/TussAnzelius/Desktop/FORSA-Exjobb/exjobb/Project.toml")
 
 using JuMP, Gurobi, Ipopt, AxisArrays, UnPack, FileIO, Statistics,
       StatsPlots, Plots.PlotMeasures, Dates, FilePathsBase, CategoricalArrays
@@ -18,7 +18,7 @@ mutable struct Plant
     meanhead::Union{Int, Float64}           # m
 end
 
-struct Turbine
+mutable struct Turbine
     name_nr::Tuple{Symbol, Int64}
     maxdischarge::Union{Int, Float64}
     meandischarge::Union{Int, Float64}
@@ -112,6 +112,8 @@ modelversions = Dict(
     "Linear" => (main=(type=:LP, power="E taylor", e="cv segments origo"), start=(;)),
     "NonLinear" =>  (main=(type=:NLP, power="bilinear HeadE", e="ncv poly rampseg"), start=(type=:LP, power="E taylor", e="cv segments origo"))
 )
+#include("add_turbines.jl")
+#add_bottleneck_turbines() 
 
 # USAGE:
 # river = :Luleälven, :Skellefteälven, :Umeälven, :Ångermanälven, :Indalsälven, :Ljungan, :Ljusnan, :Dalälven, :Götaälv
@@ -240,4 +242,4 @@ function setsolver(model, objective, solver)
     end
 end
 
-#runmodel(:Skellefteälven, "2016-05-05T08", "2017-05-05T08", "Profit", "Linear", "Dagens miljövillkor", save_variables=false, silent=true)
+#runmodel(:Skellefteälven, "2016-01-01T08", "2016-01-31T08", "Profit", "Linear", "Dagens miljövillkor", save_variables=false, silent=true)

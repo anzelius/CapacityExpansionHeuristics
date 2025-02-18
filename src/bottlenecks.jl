@@ -1,7 +1,7 @@
 #import Pkg
 #Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
 
-include("FORSA.jl")
+#include("FORSA.jl")
 
 mutable struct Node 
     name::Symbol
