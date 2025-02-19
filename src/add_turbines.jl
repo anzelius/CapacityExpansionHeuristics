@@ -91,7 +91,7 @@ function largest_smaller_than_or_equal(sorted_list, threshold)
 end
 
 # reduce bottlenecks by increasing max_discharge and adding similar turbines  
-function increase_discharge_and_new_turbines(river)
+function increase_discharge_and_new_turbines(river, modify_efficieny_curve=true)
     threshold_discharge_increase = 0.1 
     threshold_plant_diff = 0.35
 
@@ -142,7 +142,7 @@ function increase_discharge_and_new_turbines(river)
                 end 
                 
                 # then try increase discharge 
-                plant_discharge_to_increase = Dict{Turbine, Int64}() 
+                turbine_discharge_to_increase = Dict{Turbine, Int64}() 
                 @label start2 
                 while missing_discharge > 0
                     if isempty(plant_turbines)
@@ -153,7 +153,7 @@ function increase_discharge_and_new_turbines(river)
                         if target_turbine !== nothing
                             missing_discharge = missing_discharge_save
                             empty!(TURBINEINFO_TEMP)
-                            empty!(plant_discharge_to_increase)
+                            empty!(turbine_discharge_to_increase)
                             new_turbine = build_from_existing_turbines(target_turbine, plant_name, river)
                             missing_discharge -= new_turbine.maxdischarge
                             plant_turbines = copy(plant_turbines_save) 
@@ -171,25 +171,25 @@ function increase_discharge_and_new_turbines(river)
                     q = missing_discharge / plant_turbine.maxdischarge
                     if q < threshold_discharge_increase
                         # increase discharge at plant turbine 
-                        # TODO: increase discharge at a temp turbine for now, then replace at the end 
-                        plant_discharge_to_increase[plant_turbine] = missing_discharge
-                        #plant_turbine.maxdischarge += missing_discharge
+                        turbine_discharge_to_increase[plant_turbine] = missing_discharge
                         println("increased discharge for: $river : $plant_name with $missing_discharge")
                         missing_discharge -= missing_discharge 
                     else
                         #increase discharge at plant turbine 
-                        # TODO: increase discharge at a temp turbine for now, then replace at the end 
-                        #plant_turbine.maxdischarge += min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
-                        plant_discharge_to_increase[plant_turbine] = min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
+                        turbine_discharge_to_increase[plant_turbine] = min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
                         println("increased discharge for: $river : $plant_name with $(min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase)))")
                         missing_discharge -= min(missing_discharge, ceil(plant_turbine.maxdischarge * threshold_discharge_increase))  
                     end  
                 end 
 
                 # add turbines and missing discharge to turbines 
-                if !isempty(plant_discharge_to_increase) 
-                    for (plant, discharge_to_increase) in plant_discharge_to_increase
-                        plant.maxdischarge += discharge_to_increase
+                if !isempty(turbine_discharge_to_increase) 
+                    for (turbine, discharge_to_increase) in turbine_discharge_to_increase
+                        if modify_efficieny_curve
+                            turbine.etapoints.e += discharge_to_increase
+                        else
+                            turbine.maxdischarge += discharge_to_increase
+                        end 
                     end 
                 end
 
@@ -205,7 +205,7 @@ end
 
 
 # reduce bottlenecks by increasing max_discharge only  
-function increase_discharge(river)
+function increase_discharge(river, modify_efficieny_curve=true)
     threshold_discharge_increase = 0.3 
 
     #for river in rivers 
@@ -214,10 +214,8 @@ function increase_discharge(river)
                 plant_turbines = [plant_turbine for plant_turbine in TURBINEINFO[river] if plant_turbine.name_nr[1] == plant_name]
                 plant_turbines = sort(plant_turbines, by=t -> t.maxdischarge, rev=true)
                 # increase discharge as much as possible  
-                plant_discharge_to_increase = Dict{Turbine, Int64}() 
-                if plant_name == :Vittjärv
-                    println("test")
-                end 
+                turbine_discharge_to_increase = Dict{Turbine, Int64}() 
+
                 while missing_discharge > 0
                     if isempty(plant_turbines)
                         # can't increase discharge anymore but still some left, leave it 
@@ -229,7 +227,7 @@ function increase_discharge(river)
                     if q < threshold_discharge_increase
                         # increase discharge at plant turbine 
                         # TODO: increase discharge at a temp turbine for now, then replace at the end 
-                        plant_discharge_to_increase[plant_turbine] = missing_discharge
+                        turbine_discharge_to_increase[plant_turbine] = missing_discharge
                         #plant_turbine.maxdischarge += missing_discharge
                         println("increased discharge for: $river : $plant_name with $missing_discharge")
                         missing_discharge -= missing_discharge 
@@ -237,16 +235,20 @@ function increase_discharge(river)
                         #increase discharge at plant turbine 
                         # TODO: increase discharge at a temp turbine for now, then replace at the end 
                         #plant_turbine.maxdischarge += min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
-                        plant_discharge_to_increase[plant_turbine] = min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
+                        turbine_discharge_to_increase[plant_turbine] = min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase))
                         println("increased discharge for: $river : $plant_name with $(min(missing_discharge, round(plant_turbine.maxdischarge * threshold_discharge_increase)))")
                         missing_discharge -= min(missing_discharge, ceil(plant_turbine.maxdischarge * threshold_discharge_increase))  
                     end  
                 end 
 
                 # add turbines and missing discharge to turbines 
-                if !isempty(plant_discharge_to_increase) 
-                    for (plant, discharge_to_increase) in plant_discharge_to_increase
-                        plant.maxdischarge += discharge_to_increase
+                if !isempty(turbine_discharge_to_increase) 
+                    for (turbine, discharge_to_increase) in turbine_discharge_to_increase
+                        if modify_efficieny_curve
+                            turbine.etapoints.e += discharge_to_increase
+                        else 
+                            turbine.maxdischarge += discharge_to_increase
+                        end 
                     end 
                 end
 

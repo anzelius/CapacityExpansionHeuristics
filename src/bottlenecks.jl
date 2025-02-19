@@ -1,7 +1,7 @@
 #import Pkg
 #Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
-
 #include("FORSA.jl")
+include("hhq_mhq.jl")
 
 mutable struct Node 
     name::Symbol
@@ -32,12 +32,24 @@ for river in rivers
     TURBINE = Dict(plantinfo[p].nr_turbines > 0 ? p => collect(1:plantinfo[p].nr_turbines) : p => Int[] for p in PLANT)
     global num_real_plants += length(PPLANT)
 
+    use_flow_values = false  
+    method = "MHQ"
+    flow_values = use_flow_values ? get_flow_values(river, method) : nothing 
+
     temp_dict_nodes = Dict{Symbol, Node}() # plant name, node 
     for connection in connections_temp
         p = connection.name 
         node1 = get!(temp_dict_nodes, p) do
             real_plant = plantinfo[p].nr_turbines != 0
-            max_discharge = real_plant ? sum(turbineinfo[p,j].maxdischarge for j in TURBINE[p]) : 0 
+            max_discharge = 0 
+            if real_plant
+                if use_flow_values && !isnothing(flow_values)
+                    max_discharge = flow_values[p] 
+                else
+                    max_discharge = sum(turbineinfo[p,j].maxdischarge for j in TURBINE[p])
+                end  
+            end 
+            #max_discharge = real_plant ? sum(turbineinfo[p,j].maxdischarge for j in TURBINE[p]) : 0 
             Node(p, max_discharge, [], [], real_plant) 
         end
 
@@ -45,8 +57,14 @@ for river in rivers
             up = upstream.name 
             node2 = get!(temp_dict_nodes, up) do
                 real_plant = plantinfo[up].nr_turbines != 0
-                max_discharge = real_plant ? sum(turbineinfo[up,j].maxdischarge for j in TURBINE[up]) : 0
-                Node(up, max_discharge, [], [], real_plant) 
+                max_discharge = 0 
+                if real_plant
+                    if use_flow_values && !isnothing(flow_values)
+                        max_discharge = flow_values[p] 
+                    else
+                        max_discharge = sum(turbineinfo[p,j].maxdischarge for j in TURBINE[p])
+                    end  
+                end 
             end
             push!(node1.upstream, node2.name) # if node1 has node2 as upstream, node2 has node1 as downstream
             push!(node2.downstream, node1.name) 
@@ -54,6 +72,7 @@ for river in rivers
     end 
     connections[river] = ConnectionsGraph(temp_dict_nodes[:Hav], temp_dict_nodes) 
 end 
+
 
 river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()  # river : [Dict(bottleneck plant : missing_discharge), ]
 # dfs in all river networks, mark all bottleneck plants for each river and their diff in discharge 
@@ -124,10 +143,6 @@ for river in rivers # [:Skellefteälven]
             max_discharge_along_river += max_d 
         end 
 
-        if current_plant.name == :Vängelsjön  
-            l = 0 
-        end
-
         if current_plant.is_real_plant 
             plant_discharge = current_plant.discharge 
             if plant_discharge < max_discharge_along_river 
@@ -163,7 +178,7 @@ n_bottleneck_plants = sum(length(river_bottlenecks[river]) for river in rivers)
 println("Total num plants: $num_real_plants")
 println("Total num bottlenecks: $n_bottleneck_plants")
 println("Fraction of bottlenecks: $(n_bottleneck_plants/num_real_plants)")
-
+ 
 
 
 
