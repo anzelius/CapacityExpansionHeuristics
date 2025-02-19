@@ -186,7 +186,7 @@ function increase_discharge_and_new_turbines(river, modify_efficieny_curve=true)
                 if !isempty(turbine_discharge_to_increase) 
                     for (turbine, discharge_to_increase) in turbine_discharge_to_increase
                         if modify_efficieny_curve
-                            turbine.etapoints.e += discharge_to_increase
+                            turbine.etapoints = [(d=p.d, e=p.e + discharge_to_increase) for p in turbine.etapoints]
                         else
                             turbine.maxdischarge += discharge_to_increase
                         end 

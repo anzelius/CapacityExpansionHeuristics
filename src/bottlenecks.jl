@@ -1,6 +1,6 @@
 #import Pkg
 #Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
-#include("FORSA.jl")
+include("FORSA.jl")
 include("hhq_mhq.jl")
 
 mutable struct Node 
@@ -32,8 +32,8 @@ for river in rivers
     TURBINE = Dict(plantinfo[p].nr_turbines > 0 ? p => collect(1:plantinfo[p].nr_turbines) : p => Int[] for p in PLANT)
     global num_real_plants += length(PPLANT)
 
-    use_flow_values = false  
-    method = "MHQ"
+    use_flow_values = true  
+    method = "HHQ"
     flow_values = use_flow_values ? get_flow_values(river, method) : nothing 
 
     temp_dict_nodes = Dict{Symbol, Node}() # plant name, node 

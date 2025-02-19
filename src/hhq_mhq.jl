@@ -1,5 +1,5 @@
 
-include("FORSA.jl")
+#include("FORSA.jl")
 using XLSX, DataFrames
 
 function get_flow_values(river, method="HHQ")
@@ -11,9 +11,8 @@ function get_flow_values(river, method="HHQ")
 
     plant_values = df[:, "Plant"]  
     hhq_values = df[:, method] 
-    for plant in plant_values, hhq in hhq_values
+    for (plant, hhq) in zip(plant_values, hhq_values)
         flow_values[Symbol(plant)] = round(hhq) 
     end 
     return flow_values
 end 
-
