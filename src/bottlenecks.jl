@@ -19,8 +19,8 @@ end
 function create_new_node(plant_name, turbineinfo, TURBINE, flow_values, plant_bottleneck_value, plantinfo, use_flow_values)
     real_plant = plantinfo[plant_name].nr_turbines != 0
     max_discharge = 0 
-    tot_turbine_discharge = sum(turbineinfo[plant_name,j].maxdischarge for j in TURBINE[plant_name])
     if real_plant
+        tot_turbine_discharge = sum(turbineinfo[plant_name,j].maxdischarge for j in TURBINE[plant_name])
         if use_flow_values && !isnothing(flow_values)
             max_discharge = flow_values[plant_name] 
             if max_discharge > tot_turbine_discharge
@@ -37,9 +37,10 @@ num_real_plants = 0
 # Create graph structure of network for easier handling 
 # sum all maxdischarge in all turbines for each plant to get plant max discharge 
 #function create_connection_graph()
-plant_bottleneck_value = Dict{Symbol, Float64}() 
+river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()
 connections = Dict{Symbol, ConnectionsGraph}()  # river, head node (hav) 
 for river in rivers 
+    plant_bottleneck_value = Dict{Symbol, Float64}() 
     plants = PLANTINFO[river] 
     turbines = TURBINEINFO[river]
     connections_temp = NETWORK[river]
@@ -70,6 +71,7 @@ for river in rivers
             push!(node2.downstream, node1.name) 
         end  
     end 
+    river_bottlenecks[river] = plant_bottleneck_value
     connections[river] = ConnectionsGraph(temp_dict_nodes[:Hav], temp_dict_nodes) 
 end 
 #return connections, plant_bottleneck_value
@@ -77,7 +79,7 @@ end
 
 #function get_river_bottlenecks()
 #(connections, plant_bottleneck_value) = create_connection_graph()
-river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()  # river : [Dict(bottleneck plant : missing_discharge), ]
+#river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()  # river : [Dict(bottleneck plant : missing_discharge), ]
 # dfs in all river networks, mark all bottleneck plants for each river and their diff in discharge 
 # save to global variable? save to file? make function? 
 for river in rivers # [:Skellefteälven] 
@@ -154,7 +156,7 @@ for river in rivers # [:Skellefteälven]
                     max_discharge_along_river = children_split(current_plant, max_discharge_along_river, detour_nodes)
                 end 
                 if plant_discharge < max_discharge_along_river 
-                    plant_bottleneck_value[current_plant.name] = get!(plant_bottleneck_value, current_plant.name, 0) + (max_discharge_along_river - plant_discharge)
+                    river_bottlenecks[river][current_plant.name] = get!(river_bottlenecks[river], current_plant.name, 0) + (max_discharge_along_river - plant_discharge)
                 end 
             else 
                 max_discharge_along_river = plant_discharge
@@ -171,7 +173,7 @@ for river in rivers # [:Skellefteälven]
     end 
 
     dfs(connections[river].head)  
-    river_bottlenecks[river] = plant_bottleneck_value
+    #river_bottlenecks[river] = plant_bottleneck_value
     #println(river)
     #println("$(length(river_bottlenecks[river])) / $(length(dp_max_discharge))")
 end 
