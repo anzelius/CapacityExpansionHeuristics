@@ -5,7 +5,8 @@ include("add_turbines.jl")
 function run_model(river::Symbol, start_datetime::String, end_datetime::String, 
     objective::String, model::String, scenario::String; recalc::NamedTuple=(;), 
     save_variables=true, silent=true, high_demand_trig=false, high_demand_datetime="2016-01-15T08", 
-    end_start_constraints=true, reduce_bottlenecks=false, reduce_bottlenecks_method="new_turbines") 
+    end_start_constraints=true, reduce_bottlenecks=false, reduce_bottlenecks_method="new_turbines",
+    bottleneck_values) 
 
     type=modelversions[model].main.type
     power=modelversions[model].main.power
@@ -19,11 +20,11 @@ function run_model(river::Symbol, start_datetime::String, end_datetime::String,
     
     if reduce_bottlenecks
         if reduce_bottlenecks_method == "new_turbines"
-            add_bottleneck_turbines(river)
+            add_bottleneck_turbines(river, river_bottlenecks)
         elseif reduce_bottlenecks_method == "new_turbines_and_increase_discharge" 
-            increase_discharge_and_new_turbines(river) 
+            increase_discharge_and_new_turbines(river, bottleneck_values) 
         elseif reduce_bottlenecks_method == "increase_discharge"
-            increase_discharge(river) 
+            increase_discharge(river, river_bottlenecks) 
         end
     end 
 
@@ -146,10 +147,13 @@ end
 
 failed_rivers = [] 
 total_max_power_production = []
+connections, river_bottlenecks = create_connection_graph(true, "MHQ")
+#river_bottlenecks = get_river_bottlenecks(connections, river_bottlenecks)
 for river in rivers 
     model_results = run_model(river, "2019-01-01T08", "2019-01-31T08", "Profit", "Linear", "Dagens miljövillkor", 
     save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-15T15", 
-    end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge")
+    end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
+    bottleneck_values=river_bottlenecks)
 
     if isnothing(model_results) 
         push!(failed_rivers, river) 

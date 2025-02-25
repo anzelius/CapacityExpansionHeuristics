@@ -33,14 +33,14 @@ function create_new_node(plant_name, turbineinfo, TURBINE, flow_values, plant_bo
     return Node(plant_name, max_discharge, [], [], real_plant)
 end 
 
-num_real_plants = 0
+#num_real_plants = 0
 # Create graph structure of network for easier handling 
 # sum all maxdischarge in all turbines for each plant to get plant max discharge 
-#function create_connection_graph()
+function create_connection_graph(use_flow_values=false, method = "MHQ")
 river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()
 connections = Dict{Symbol, ConnectionsGraph}()  # river, head node (hav) 
-use_flow_values = true   
-method = "MHQ"
+#use_flow_values = true   
+#method = "MHQ"
 for river in rivers 
     plant_bottleneck_value = Dict{Symbol, Float64}() 
     plants = PLANTINFO[river] 
@@ -52,7 +52,7 @@ for river in rivers
     realplants = [plantinfo[p].nr_turbines != 0 for p in PLANT]
     PPLANT = PLANT[realplants]
     TURBINE = Dict(plantinfo[p].nr_turbines > 0 ? p => collect(1:plantinfo[p].nr_turbines) : p => Int[] for p in PLANT)
-    global num_real_plants += length(PPLANT)
+    #global num_real_plants += length(PPLANT)
 
     flow_values = use_flow_values ? get_flow_values(river, method) : nothing 
 
@@ -75,13 +75,11 @@ for river in rivers
     river_bottlenecks[river] = plant_bottleneck_value
     connections[river] = ConnectionsGraph(temp_dict_nodes[:Hav], temp_dict_nodes) 
 end 
-#return connections, plant_bottleneck_value
-#end 
-if use_flow_values
-    return 
+return connections, river_bottlenecks
 end 
-#function get_river_bottlenecks()
-#(connections, plant_bottleneck_value) = create_connection_graph()
+
+function get_river_bottlenecks(connections, river_bottlenecks)
+#(connections, river_bottlenecks) = create_connection_graph()
 #river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()  # river : [Dict(bottleneck plant : missing_discharge), ]
 # dfs in all river networks, mark all bottleneck plants for each river and their diff in discharge 
 # save to global variable? save to file? make function? 
@@ -180,13 +178,16 @@ for river in rivers # [:Skellefteälven]
     #println(river)
     #println("$(length(river_bottlenecks[river])) / $(length(dp_max_discharge))")
 end 
+return river_bottlenecks 
+end 
 
-
+function print_bottleneck_stats(river_bottlenecks)
 n_bottleneck_plants = sum(length(river_bottlenecks[river]) for river in rivers) 
-println("Total num plants: $num_real_plants")
+println("Total num plants: $NUM_REAL_PLANTS")
 println("Total num bottlenecks: $n_bottleneck_plants")
-println("Fraction of bottlenecks: $(n_bottleneck_plants/num_real_plants)")
+println("Fraction of bottlenecks: $(n_bottleneck_plants/NUM_REAL_PLANTS)")
 #return river_bottlenecks
 #end 
+end 
 
 

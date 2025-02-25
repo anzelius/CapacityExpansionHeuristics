@@ -51,7 +51,7 @@ end
 # river : Dict(bottleneck plant : missing_discharge)
 # river_bottlenecks::Dict{Symbol, Dict{Symbol, Int64}}
 # reduce bottlenecks by adding any type of new turbine matching the required discharge 
-function add_bottleneck_turbines(river)
+function add_bottleneck_turbines(river, river_bottlenecks)
     #for river in rivers 
         if haskey(river_bottlenecks, river)
             for (plant_name, missing_discharge) in river_bottlenecks[river]
@@ -91,8 +91,8 @@ function largest_smaller_than_or_equal(sorted_list, threshold)
 end
 
 # reduce bottlenecks by increasing max_discharge and adding similar turbines  
-function increase_discharge_and_new_turbines(river, modify_efficieny_curve=true)
-    threshold_discharge_increase = 0.1 
+function increase_discharge_and_new_turbines(river, river_bottlenecks, modify_efficieny_curve=true)
+    threshold_discharge_increase = 0.2 
     threshold_plant_diff = 0.35
 
     #for river in rivers 
@@ -205,8 +205,8 @@ end
 
 
 # reduce bottlenecks by increasing max_discharge only  
-function increase_discharge(river, modify_efficieny_curve=true)
-    threshold_discharge_increase = 0.3 
+function increase_discharge(river, river_bottlenecks, modify_efficieny_curve=true)
+    threshold_discharge_increase = 0.2 
 
     #for river in rivers 
         if haskey(river_bottlenecks, river)
