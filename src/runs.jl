@@ -1,6 +1,7 @@
 include("FORSA.jl")
 include("bottlenecks.jl")
 include("add_turbines.jl")
+include("bottleneck_selection.jl")
 
 function run_model(river::Symbol, start_datetime::String, end_datetime::String, 
     objective::String, model::String, scenario::String; recalc::NamedTuple=(;), 
@@ -22,7 +23,7 @@ function run_model(river::Symbol, start_datetime::String, end_datetime::String,
         if reduce_bottlenecks_method == "new_turbines"
             add_bottleneck_turbines(river, river_bottlenecks)
         elseif reduce_bottlenecks_method == "new_turbines_and_increase_discharge" 
-            increase_discharge_and_new_turbines(river, bottleneck_values) 
+            num_new_turbines, num_turbine_upgrades, num_upgraded_plants = increase_discharge_and_new_turbines(river, bottleneck_values) 
         elseif reduce_bottlenecks_method == "increase_discharge"
             increase_discharge(river, river_bottlenecks) 
         end
@@ -57,7 +58,7 @@ function run_model(river::Symbol, start_datetime::String, end_datetime::String,
     # funkar inte.. && (status == MOI.OPTIMAL || status == "LOCALLY_SOLVED")
 
     if type == :LP || isempty(start)
-        return (results, params) #status # rivermodel, params, results
+        return (results, params, num_new_turbines, num_turbine_upgrades, num_upgraded_plants) #status # rivermodel, params, results
     end
 
     println("\n\nBuilding second model (because modifying JuMP models is super slow)...")
@@ -145,28 +146,56 @@ function setsolver(model, objective, solver)
     end
 end
 
+ 
+connections, river_bottlenecks_all = create_connection_graph()
+river_bottlenecks_all = get_river_bottlenecks(connections, river_bottlenecks_all)
+plant_upgrades = discharge_increase_based(river_bottlenecks_all)
 failed_rivers = [] 
-total_max_power_production = []
-connections, river_bottlenecks = create_connection_graph(true, "MHQ")
-#river_bottlenecks = get_river_bottlenecks(connections, river_bottlenecks)
-for river in rivers 
-    model_results = run_model(river, "2019-01-01T08", "2019-01-31T08", "Profit", "Linear", "Dagens miljövillkor", 
-    save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-15T15", 
-    end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
-    bottleneck_values=river_bottlenecks)
+power_production_percentile = []
+num_new_turbines_percentile, num_turbine_upgrades_percentile, num_upgraded_plants_percentile = [], [], [] 
+for percentile in 10:10:100 
+    plants_to_upgrade = plant_upgrades[percentile]
+    #river_bottlenecks = Dict(k => river_bottlenecks_all[k] for k in plants_to_upgrade if haskey(river_bottlenecks_all, k))
+    total_max_power_production = []
+    tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants = 0, 0, 0
+    for river in rivers 
+        river_bottlenecks = Dict(river => Dict(plant => value for (plant, value) in river_bottlenecks_all[river] if plant in plants_to_upgrade)) 
+        model_results = run_model(river, "2019-01-01T08", "2019-01-31T08", "Profit", "Linear", "Dagens miljövillkor", 
+        save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-15T15", 
+        end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
+        bottleneck_values=river_bottlenecks)
 
-    if isnothing(model_results) 
-        push!(failed_rivers, river) 
-    else 
-        results, params = model_results
-        @unpack Power_production = results
-        @unpack date_TIME = params 
-        pp = value.(Power_production) 
-        sum_result = [sum(pp[t, :, :]) for t in date_TIME]
-        max_achieved_power_production = maximum(sum_result)
-        push!(total_max_power_production, max_achieved_power_production) 
+        if isnothing(model_results) 
+            push!(failed_rivers, river) 
+        else 
+            results, params, num_new_turbines, num_turbine_upgrades, num_upgraded_plants = model_results
+            @unpack Power_production = results
+            @unpack date_TIME = params 
+            pp = value.(Power_production) 
+            sum_result = [sum(pp[t, :, :]) for t in date_TIME]
+            max_achieved_power_production = maximum(sum_result)
+            push!(total_max_power_production, max_achieved_power_production) 
+
+            tot_new_turbines += num_new_turbines
+            tot_turbine_upgrades += num_turbine_upgrades
+            tot_upgraded_plants += num_upgraded_plants
+        end 
     end 
-end 
 
-println("failed for $(length(failed_rivers)) river: $failed_rivers")
-println("Total max power production: $(sum(total_max_power_production))")
+    push!(num_new_turbines_percentile, tot_new_turbines)
+    push!(num_turbine_upgrades_percentile, tot_turbine_upgrades) 
+    push!(num_upgraded_plants_percentile, tot_upgraded_plants)
+
+    println("failed for $(length(failed_rivers)) river: $failed_rivers")
+    println("Total max power production: $(sum(total_max_power_production))")
+    push!(power_production_percentile, sum(total_max_power_production))
+end 
+println("#New turbines: $num_new_turbines_percentile")
+println("#Turbine upgrades: $num_turbine_upgrades_percentile")
+println("#Plant upgrades: $num_upgraded_plants_percentile") 
+println("Power production: $power_production_percentile")
+
+gr() 
+p = plot(10:10:100, power_production_percentile)
+display(p) 
+readline() 

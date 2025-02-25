@@ -94,6 +94,9 @@ end
 function increase_discharge_and_new_turbines(river, river_bottlenecks, modify_efficieny_curve=true)
     threshold_discharge_increase = 0.2 
     threshold_plant_diff = 0.35
+    num_new_turbines = 0 
+    num_turbine_upgrades = 0
+    num_upgraded_plants = 0 
 
     #for river in rivers 
         if haskey(river_bottlenecks, river)
@@ -182,8 +185,10 @@ function increase_discharge_and_new_turbines(river, river_bottlenecks, modify_ef
                     end  
                 end 
 
+
                 # add turbines and missing discharge to turbines 
                 if !isempty(turbine_discharge_to_increase) 
+                    num_turbine_upgrades += length(turbine_discharge_to_increase)
                     for (turbine, discharge_to_increase) in turbine_discharge_to_increase
                         if modify_efficieny_curve
                             turbine.etapoints = [(d=p.d, e=p.e + discharge_to_increase) for p in turbine.etapoints]
@@ -194,13 +199,20 @@ function increase_discharge_and_new_turbines(river, river_bottlenecks, modify_ef
                 end
 
                 if !isempty(TURBINEINFO_TEMP)
+                    num_new_turbines += length(TURBINEINFO_TEMP)
                     for new_turbine in TURBINEINFO_TEMP
                         push!(TURBINEINFO[river], new_turbine)
                     end  
-                end           
-            end 
+                end  
+                
+                if !isempty(turbine_discharge_to_increase) || !isempty(TURBINEINFO_TEMP)
+                    num_upgraded_plants += 1 
+                end 
+
+            end  
         end 
     #end 
+    return num_new_turbines, num_turbine_upgrades, num_upgraded_plants
 end 
 
 
