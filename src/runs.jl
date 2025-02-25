@@ -47,7 +47,7 @@ function run_model(river::Symbol, start_datetime::String, end_datetime::String,
     status = termination_status(rivermodel)
     status != MOI.OPTIMAL && @warn "The solver did not report an optimal solution." 
     if status != MOI.OPTIMAL
-        return
+        return nothing 
     end 
     println("\nSolve status: $status")
 
@@ -56,7 +56,7 @@ function run_model(river::Symbol, start_datetime::String, end_datetime::String,
     # funkar inte.. && (status == MOI.OPTIMAL || status == "LOCALLY_SOLVED")
 
     if type == :LP || isempty(start)
-        return status # rivermodel, params, results
+        return (results, params) #status # rivermodel, params, results
     end
 
     println("\n\nBuilding second model (because modifying JuMP models is super slow)...")
@@ -144,11 +144,25 @@ function setsolver(model, objective, solver)
     end
 end
 
-
+failed_rivers = [] 
+total_max_power_production = []
 for river in rivers 
-    run_model(river, "2019-01-01T08", "2019-01-31T08", "Profit", "Linear", "Dagens miljövillkor", 
+    model_results = run_model(river, "2019-01-01T08", "2019-01-31T08", "Profit", "Linear", "Dagens miljövillkor", 
     save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-15T15", 
     end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge")
+
+    if isnothing(model_results) 
+        push!(failed_rivers, river) 
+    else 
+        results, params = model_results
+        @unpack Power_production = results
+        @unpack date_TIME = params 
+        pp = value.(Power_production) 
+        sum_result = [sum(pp[t, :, :]) for t in date_TIME]
+        max_achieved_power_production = maximum(sum_result)
+        push!(total_max_power_production, max_achieved_power_production) 
+    end 
 end 
 
-
+println("failed for $(length(failed_rivers)) river: $failed_rivers")
+println("Total max power production: $(sum(total_max_power_production))")

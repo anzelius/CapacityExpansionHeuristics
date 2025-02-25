@@ -272,27 +272,13 @@ function printbasicresults(params, results; type, power, e, recalculate=false)
         println("Best bound: [none available]")
     end
     println("Total power production (TWh): ", round(sum(value.(Power_production))/1e6, digits=2))
-    #date_sums = Dict{DateTime, Float64}()
-    #t in date_TIME, p in PPLANT, j in TURBINE[p] 
-    #powervalues = [sum(run.power_turbines[t,p,j] for p in run.PPLANT for j in run.TURBINE[p]) for t in run.date_TIME]
 
-    #sum_result = [sum(value.(Power_production)[t, p, j] for p in PPLANT for j in TURBINE[p]) for t in date_TIME]
     pp = value.(Power_production) 
     sum_result = [sum(pp[t, :, :]) for t in date_TIME]
-    #for idx in eachindex(value.(Power_production))
-    #    t, p , j = idx 
-    #    v = (value.(Power_production))[idx]
-    #    if haskey(date_sums, t)
-    #        date_sums[t] += v
-    #    else
-    #        date_sums[t] = v
-    #    end
-    #end
-    # Convert the sums into an array
-    #sums_array = collect(values(date_sums))
+
     println("Max power output (MW): ", maximum(sum_result))
     open("results.txt", "a") do file
-        write(file, string(Float64(maximum(sum_result))) * "\n")
+        write(file, "\n" * string(Float64(maximum(sum_result))) * "\n")
     end
 
     captured_price = round(objective_value(rivermodel)*1e6/sum(value.(Power_production)), digits = 2)
