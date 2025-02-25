@@ -1,10 +1,9 @@
 include("FORSA.jl")
-#include("bottlenecks.jl") 
+include("bottlenecks.jl") 
 
 ############################
 # theoretical power calculated P_new = k * Q_new 
 ############################
-test_max_discharge = 0 
 tot_max_discharge = 0 
 tot_reported_capacity = 0
 for river in rivers
@@ -17,22 +16,18 @@ for river in rivers
     PPLANT = PLANT[realplants]
     TURBINE = Dict(plantinfo[p].nr_turbines > 0 ? p => collect(1:plantinfo[p].nr_turbines) : p => Int[] for p in PLANT)
 
-    max_max_d = 0 
-    min_max_d = 10000
     for p in PPLANT
         max_d = sum(turbineinfo[p,j].maxdischarge for j in TURBINE[p])
         global tot_max_discharge += max_d
-        max_max_d = max(max_max_d, max_d)
-        min_max_d = min(min_max_d, max_d) 
     end 
-    global test_max_discharge += (max_max_d-min_max_d)/2 * length(PPLANT)
+
     for plant in plants
         global tot_reported_capacity += isfinite(plant.ncap) ? plant.ncap : 0 
     end 
 end 
 
 k = tot_reported_capacity / tot_max_discharge
-println(tot_reported_capacity)
+println("reported capacity (MW): $tot_reported_capacity")
 
 tot_missing_discharge = 0 
 for river in rivers 
@@ -42,10 +37,8 @@ for river in rivers
 end 
 
 new_capacity = k * (tot_max_discharge + tot_missing_discharge)
-println(new_capacity) 
-println(new_capacity - tot_reported_capacity)
-
-println(k * test_max_discharge - tot_reported_capacity)
+println("new theoretical capacity (MW): $new_capacity") 
+println("Diff in theoretical capacity and repoted capacity: $(new_capacity - tot_reported_capacity)")
 
 ############################
 # calculate how 'different' turbines installed at each plant are 

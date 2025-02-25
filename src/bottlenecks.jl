@@ -39,6 +39,8 @@ num_real_plants = 0
 #function create_connection_graph()
 river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()
 connections = Dict{Symbol, ConnectionsGraph}()  # river, head node (hav) 
+use_flow_values = true   
+method = "MHQ"
 for river in rivers 
     plant_bottleneck_value = Dict{Symbol, Float64}() 
     plants = PLANTINFO[river] 
@@ -51,8 +53,7 @@ for river in rivers
     PPLANT = PLANT[realplants]
     TURBINE = Dict(plantinfo[p].nr_turbines > 0 ? p => collect(1:plantinfo[p].nr_turbines) : p => Int[] for p in PLANT)
     global num_real_plants += length(PPLANT)
-    use_flow_values = true  
-    method = "HHQ"
+
     flow_values = use_flow_values ? get_flow_values(river, method) : nothing 
 
     temp_dict_nodes = Dict{Symbol, Node}() # plant name, node 
@@ -76,7 +77,9 @@ for river in rivers
 end 
 #return connections, plant_bottleneck_value
 #end 
-
+if use_flow_values
+    return 
+end 
 #function get_river_bottlenecks()
 #(connections, plant_bottleneck_value) = create_connection_graph()
 #river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()  # river : [Dict(bottleneck plant : missing_discharge), ]
