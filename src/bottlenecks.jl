@@ -1,6 +1,4 @@
-#import Pkg
-#Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
-include("FORSA.jl")
+#include("constants.jl")
 include("hhq_mhq.jl")
 
 mutable struct Node 
