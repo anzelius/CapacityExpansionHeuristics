@@ -30,12 +30,14 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     
     num_new_turbines, num_turbine_upgrades, num_upgraded_plants = 0, 0, 0 
     if reduce_bottlenecks
-        if reduce_bottlenecks_method == "new_turbines"
-            add_bottleneck_turbines(river, river_bottlenecks)
+        if reduce_bottlenecks_method == "new_turbines_small_and_big"
+            num_new_turbines, num_turbine_upgrades, num_upgraded_plants = add_bottleneck_turbines(river, bottleneck_values)
         elseif reduce_bottlenecks_method == "new_turbines_and_increase_discharge" 
             num_new_turbines, num_turbine_upgrades, num_upgraded_plants = increase_discharge_and_new_turbines(river, bottleneck_values) 
         elseif reduce_bottlenecks_method == "increase_discharge"
-            increase_discharge(river, river_bottlenecks) 
+            increase_discharge(river, bottleneck_values) 
+        elseif reduce_bottlenecks_method == "new_turbines_similar"
+            num_new_turbines, num_turbine_upgrades, num_upgraded_plants = new_same_or_similar_turbines(river, bottleneck_values)
         end
     end 
 
@@ -158,13 +160,13 @@ end
 
 
 function run_all_rivers()
-    connections, river_bottlenecks_all = create_connection_graph()  
+    connections, river_bottlenecks_all = create_connection_graph(true, "MHQ")  
     # to run with flow values HHQ/MHQ, remove below func. Use args in create_connection_graph. 
-    river_bottlenecks_all = get_river_bottlenecks(connections, river_bottlenecks_all)
+    #river_bottlenecks_all = get_river_bottlenecks(connections, river_bottlenecks_all)
     failed_rivers = [] 
     total_max_power_production = []
     tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants = 0, 0, 0
-    for river in rivers 
+    for river in rivers
         model_results = run_model_river(river, "2019-01-01T08", "2019-01-31T08", "Profit", "Linear", "Dagens miljövillkor", 
         save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-15T15", 
         end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
@@ -197,7 +199,7 @@ function run_all_rivers()
     print_bottleneck_stats(river_bottlenecks_all)
 
 end 
-
+run_all_rivers()
 
 function run_scenario(head_based_method=true)
     connections, river_bottlenecks_all = create_connection_graph()
@@ -214,7 +216,7 @@ function run_scenario(head_based_method=true)
             river_bottlenecks = Dict(river => Dict(plant => value for (plant, value) in river_bottlenecks_all[river] if plant in plants_to_upgrade)) 
             model_results = run_model_river(river, "2019-01-01T08", "2019-01-31T08", "Profit", "Linear", "Dagens miljövillkor", 
             save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-15T15", 
-            end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
+            end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_similar",
             bottleneck_values=river_bottlenecks)  
 
             if isnothing(model_results) 
@@ -255,4 +257,4 @@ function run_scenario(head_based_method=true)
     #readline() 
 end 
 
-run_scenario()
+#run_scenario()

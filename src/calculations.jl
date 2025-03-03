@@ -4,8 +4,8 @@ include("bottlenecks.jl")
 ############################
 # theoretical power calculated P_new = k * Q_new 
 ############################
-connections, river_bottlenecks = create_connection_graph()
-river_bottlenecks = get_river_bottlenecks(connections, river_bottlenecks)
+connections, river_bottlenecks = create_connection_graph(true, "MQ")
+#river_bottlenecks = get_river_bottlenecks(connections, river_bottlenecks)
 tot_max_discharge = 0 
 tot_reported_capacity = 0
 for river in rivers

@@ -52,34 +52,44 @@ end
 # river_bottlenecks::Dict{Symbol, Dict{Symbol, Int64}}
 # reduce bottlenecks by adding any type of new turbine matching the required discharge 
 function add_bottleneck_turbines(river, river_bottlenecks)
-    #for river in rivers 
-        if haskey(river_bottlenecks, river)
-            for (plant_name, missing_discharge) in river_bottlenecks[river]
-                
-                index = searchsortedfirst([t.maxdischarge for t in sorted_turbines], missing_discharge)
-    
-                if index <= length(sorted_turbines) && sorted_turbines[index].maxdischarge == missing_discharge
-                    target_turbine = sorted_turbines[index]
-                    new_turbine = build_from_existing_turbines(target_turbine, plant_name, river)
-                    push!(TURBINEINFO[river], new_turbine)
+    num_new_turbines = 0 
+    num_turbine_upgrades = 0
+    num_upgraded_plants = 0 
+    new_turbine_flag = false 
+    if haskey(river_bottlenecks, river)
+        for (plant_name, missing_discharge) in river_bottlenecks[river]
+            new_turbine_flag = false 
+            index = searchsortedfirst([t.maxdischarge for t in sorted_turbines], missing_discharge)
+
+            if index <= length(sorted_turbines) && sorted_turbines[index].maxdischarge == missing_discharge
+                target_turbine = sorted_turbines[index]
+                new_turbine = build_from_existing_turbines(target_turbine, plant_name, river)
+                push!(TURBINEINFO[river], new_turbine)
+                num_new_turbines += 1 
+                new_turbine_flag = true 
+            else 
+                result = search_two_turbines(missing_discharge)
+                if result !== nothing
+                    target_turbine1, target_turbine2 = result 
+                    new_turbine1 = build_from_existing_turbines(target_turbine1, plant_name, river)
+                    new_turbine2 = build_from_existing_turbines(target_turbine2, plant_name, river)
+                    push!(TURBINEINFO[river], new_turbine1)
+                    push!(TURBINEINFO[river], new_turbine2) 
+                    num_new_turbines += 2 
+                    new_turbine_flag = true 
                 else 
-                    result = search_two_turbines(missing_discharge)
-                    if result !== nothing
-                        target_turbine1, target_turbine2 = result 
-                        new_turbine1 = build_from_existing_turbines(target_turbine1, plant_name, river)
-                        new_turbine2 = build_from_existing_turbines(target_turbine2, plant_name, river)
-                        push!(TURBINEINFO[river], new_turbine1)
-                        push!(TURBINEINFO[river], new_turbine2) 
-                    else 
-                        nothing 
-                        #println(missing_discharge) only the ones with -1 
-                        #new_turbine = build_artificial_effective_discharge_turbine(plant_name, river, missing_discharge)
-                        #push!(TURBINEINFO[river], new_turbine)
-                    end 
+                    nothing 
+                    #println(missing_discharge) only the ones with -1 
+                    #new_turbine = build_artificial_effective_discharge_turbine(plant_name, river, missing_discharge)
+                    #push!(TURBINEINFO[river], new_turbine)
                 end 
-            end  
+            end 
+            if new_turbine_flag
+                num_upgraded_plants += 1 
+            end 
         end  
-    #end 
+    end   
+    return num_new_turbines, num_turbine_upgrades, num_upgraded_plants
 end 
 
 function largest_smaller_than_or_equal(sorted_list, threshold)
@@ -144,7 +154,8 @@ function increase_discharge_and_new_turbines(river, river_bottlenecks, modify_ef
                                 break 
                             end 
                         end 
-                    end  
+                    end 
+                    break  
                 end 
                 
                 # then try increase discharge 
