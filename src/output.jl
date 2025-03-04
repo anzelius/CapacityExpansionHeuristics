@@ -262,9 +262,9 @@ function export_plantdata_to_xslx(river::Union{String, Symbol}, scenarios::Vecto
 end
 
 function printbasicresults(params, results; type, power, e, recalculate=false)
-    @unpack rivermodel, Power_production = results
+    @unpack rivermodel, Power_production, Discharge, Reservoir_content = results
     @unpack PLANT, PPLANT, TURBINE, date_TIME, realplants, spot_price = params
-
+    #println(value.(Discharge)) 
     println("Profit (Million SEK): ", round(objective_value(rivermodel), digits=2))
     try
         println("Best bound: ", objective_bound(rivermodel))
@@ -277,9 +277,9 @@ function printbasicresults(params, results; type, power, e, recalculate=false)
     sum_result = [sum(pp[t, :, :]) for t in date_TIME]
 
     println("Max power output (MW): ", maximum(sum_result))
-    open("results.txt", "a") do file
-        write(file, "\n" * string(Float64(maximum(sum_result))) * "\n")
-    end
+    #open("results.txt", "a") do file
+    #    write(file, "\n" * string(Float64(maximum(sum_result))) * "\n")
+    #end
 
     captured_price = round(objective_value(rivermodel)*1e6/sum(value.(Power_production)), digits = 2)
     println("Captured price (SEK/MWh): ", captured_price)

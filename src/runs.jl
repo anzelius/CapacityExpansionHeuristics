@@ -33,14 +33,14 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
         if reduce_bottlenecks_method == "new_turbines_small_and_big"
             num_new_turbines, num_turbine_upgrades, num_upgraded_plants = add_bottleneck_turbines(river, bottleneck_values)
         elseif reduce_bottlenecks_method == "new_turbines_and_increase_discharge" 
-            num_new_turbines, num_turbine_upgrades, num_upgraded_plants = increase_discharge_and_new_turbines(river, bottleneck_values) 
+            num_new_turbines, num_turbine_upgrades, num_upgraded_plants = increase_discharge_and_new_turbines(river, bottleneck_values) # biggest_turbine_first(river, bottleneck_values)
         elseif reduce_bottlenecks_method == "increase_discharge"
-            increase_discharge(river, bottleneck_values) 
+            num_new_turbines, num_turbine_upgrades, num_upgraded_plants = increase_discharge(river, bottleneck_values) 
         elseif reduce_bottlenecks_method == "new_turbines_similar"
             num_new_turbines, num_turbine_upgrades, num_upgraded_plants = new_same_or_similar_turbines(river, bottleneck_values)
         end
-    end 
-
+    end
+    
     @time params = read_inputdata(river, start_datetime, end_datetime, objective, model, scenario; silent)
     
     if high_demand_trig
@@ -55,16 +55,23 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     println("Solving model...")
 
     firsttype = isempty(start) ? type : start.type
+    #set_optimizer_attribute(rivermodel, "OutputFlag", 1)
+    #set_optimizer_attribute(rivermodel, "Presolve", 0)
+    #set_optimizer_attribute(rivermodel, "DualReductions", 0)
+    #set_optimizer_attribute(rivermodel, "Method", 2)  
+    #set_optimizer_attribute(rivermodel, "FeasibilityTol", 1e-6)  
     setsolver(rivermodel, objective, (firsttype == :NLP) ? :ipopt : :gurobi)
     optimize!(rivermodel)
+    #compute_conflict!(rivermodel)  # Run conflict detection
+    #print_conflict(rivermodel)  
 
     status = termination_status(rivermodel)
     status != MOI.OPTIMAL && @warn "The solver did not report an optimal solution." 
+    println("\nSolve status: $status")
     if status != MOI.OPTIMAL
         return nothing 
     end 
-    println("\nSolve status: $status")
-
+    
     printbasicresults(params, results; recalcargs..., recalculate=true)
     save_variables && model == "Linear" && savevariables(river, params, start_datetime, end_datetime, objective, "Linear", scenario, results, solve_time(rivermodel))
     # funkar inte.. && (status == MOI.OPTIMAL || status == "LOCALLY_SOLVED")
@@ -160,17 +167,23 @@ end
 
 
 function run_all_rivers()
-    connections, river_bottlenecks_all = create_connection_graph(true, "MHQ")  
+    #connections, river_bottlenecks_all = create_connection_graph(true, "MHQ")  
     # to run with flow values HHQ/MHQ, remove below func. Use args in create_connection_graph. 
     #river_bottlenecks_all = get_river_bottlenecks(connections, river_bottlenecks_all)
     failed_rivers = [] 
     total_max_power_production = []
     tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants = 0, 0, 0
+    PLANTINFO[:Indalsälven][19].nr_turbines = 125
+    for i in 2:125
+        new_turbine =  Turbine((:Rönnöfors, i), 124,  74, 0.89,  [(d=50, e=0.83),(d=80, e=0.88),(d=120, e=0.68)])
+        push!(TURBINEINFO[:Indalsälven], new_turbine)
+    end 
     for river in rivers
+        river = :Indalsälven
         model_results = run_model_river(river, "2019-01-01T08", "2019-01-31T08", "Profit", "Linear", "Dagens miljövillkor", 
         save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-15T15", 
-        end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
-        bottleneck_values=river_bottlenecks_all)  
+        end_start_constraints=true, reduce_bottlenecks=false, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
+        bottleneck_values=nothing)  
 
         if isnothing(model_results) 
             push!(failed_rivers, river) 
@@ -187,6 +200,7 @@ function run_all_rivers()
             tot_turbine_upgrades += num_turbine_upgrades
             tot_upgraded_plants += num_upgraded_plants
         end 
+        break 
     end 
 
     println("failed for $(length(failed_rivers)) river: $failed_rivers")
