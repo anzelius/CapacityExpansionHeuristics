@@ -16,7 +16,7 @@ function buildmodel(params, start_datetime, end_datetime, end_start_constraints,
             k_firstseg, end_rampseg, end_zeroseg, end_zeroseg_poly, end_origoseg,
             k_segcoeff, m_segcoeff, k_segcoeff_origo, m_segcoeff_origo, ed_coeff,
             maxhead, minhead, reservoir_start, reservoir_end, reservoir_area,
-            tailrace_per_dischargelags, tailrace_per_downstreamforebay, tailrace_constant  = params
+            tailrace_per_dischargelags, tailrace_per_downstreamforebay, tailrace_constant, tail_level  = params
 
     println("Number of hours = ", length(date_TIME))
     println("type = ", type)
@@ -29,7 +29,7 @@ function buildmodel(params, start_datetime, end_datetime, end_start_constraints,
         Load_diff                                                                 >= 0                                                                               # MWh                                                  
         Power_production[t in date_TIME, p in PPLANT, j in TURBINE[p]]            # lower bound set below                                                            # MWh/h
         Reservoir_content[t in date_TIME, p in PLANT]                             >= 0,                             (upper_bound = plantinfo[p].reservoir*Mm3toHE)   # HE (m3/s * 1h)
-        Tail_level[t in date_TIME, p in PPLANT]                                   >= min_level[t,p,:tail],          (upper_bound = max_level[t,p,:tail])             # m 
+        #Tail_level[t in date_TIME, p in PPLANT]                                   >= min_level[t,p,:tail],          (upper_bound = max_level[t,p,:tail])             # m 
         Forebay_level[t in date_TIME, p in PLANT]                                 >= min_level[t,p,:forebay],       (upper_bound = max_level[t,p,:forebay])          # m 
         Head[t in date_TIME, p in PPLANT]                                         >= minhead[p],                    (upper_bound = maxhead[p])                       # m  
         Discharge[t in date_TIME, p in PPLANT, j in TURBINE[p]]                   >= 0,                             (upper_bound = turbineinfo[p,j].maxdischarge)    # m3/s
@@ -99,11 +99,11 @@ function buildmodel(params, start_datetime, end_datetime, end_start_constraints,
         Forebay_level_constraint[t in date_TIME, p in PLANT],
             Forebay_level[t,p] == plantinfo[p].reservoirlow + Reservoir_content[t,p] / reservoir_area[p]
             
-        Tailrace_level[t in date_TIME, p in PPLANT],
-            Tail_level[t,p] == tailrace_constant[p] +
-                sum(tailrace_per_dischargelags[p,n] * sum(Discharge[dtshift(date_TIME,t,n),p,j] for j in TURBINE[p]) for n in LAGS) +
-                    ((downstream[p] == [:Hav]) ? 0.0 :
-                        tailrace_per_downstreamforebay[p] * Forebay_level[t,discharge_downstream[p]])
+        #Tailrace_level[t in date_TIME, p in PPLANT],
+        #    Tail_level[t,p] == tailrace_constant[p] +
+        #        sum(tailrace_per_dischargelags[p,n] * sum(Discharge[dtshift(date_TIME,t,n),p,j] for j in TURBINE[p]) for n in LAGS) +
+        #            ((downstream[p] == [:Hav]) ? 0.0 :
+        #                tailrace_per_downstreamforebay[p] * Forebay_level[t,discharge_downstream[p]])
 
         Forebay_level_up[t in date_TIME[2:end], p in PLANT],
             Forebay_level[t,p] <= Forebay_level[dtshift(date_TIME, t, 1),p] + ramp_up_level[t, p, :forebay]
@@ -111,14 +111,14 @@ function buildmodel(params, start_datetime, end_datetime, end_start_constraints,
         Forebay_level_down[t in date_TIME[2:end], p in PLANT],
             Forebay_level[t,p] >= Forebay_level[dtshift(date_TIME, t, 1),p] - ramp_down_level[t, p, :forebay]
 
-        Tailrace_level_up[t in date_TIME[2:end], p in PPLANT],
-            Tail_level[t,p] <= Tail_level[dtshift(date_TIME, t, 1),p] + ramp_up_level[t, p, :tail]
+        #Tailrace_level_up[t in date_TIME[2:end], p in PPLANT],
+        #    Tail_level[t,p] <= Tail_level[dtshift(date_TIME, t, 1),p] + ramp_up_level[t, p, :tail]
 
-        Tailrace_level_down[t in date_TIME[2:end], p in PPLANT],
-            Tail_level[t,p] >= Tail_level[dtshift(date_TIME, t, 1),p] - ramp_down_level[t, p, :tail]
+        #Tailrace_level_down[t in date_TIME[2:end], p in PPLANT],
+        #    Tail_level[t,p] >= Tail_level[dtshift(date_TIME, t, 1),p] - ramp_down_level[t, p, :tail]
 
         Calculate_head[t in date_TIME, p in PPLANT],
-            Head[t,p] == Forebay_level[t, p] - Tail_level[t, p]
+            Head[t,p] == Forebay_level[t, p] - tail_level[p]
 
         Calculate_Profit,
             Profit == sum(sum(Power_production[t,p,j] for p in PPLANT for j in TURBINE[p]) * spot_price[t] for t in date_TIME) / 1e6
@@ -174,7 +174,7 @@ function buildmodel(params, start_datetime, end_datetime, end_start_constraints,
         error("No alternative with: objective = $objective.")
     end
 
-    return (; rivermodel, Profit, Load_diff, Power_production, Reservoir_content, Tail_level, Forebay_level, Head, 
+    return (; rivermodel, Profit, Load_diff, Power_production, Reservoir_content, Forebay_level, Head, 
               Discharge, Eff_discharge, Passage_flow, Drybed_flow, Utskov_flow, Total_flow)
 end
 
@@ -182,9 +182,9 @@ end
 # Set start values using equations in run 2, no matter how variables in run 1 were calculated.
 function set_start_values!(params, results, results2; type, power, e)
     @unpack date_TIME, PLANT, PPLANT, TURBINE = params
-    Eff_discharge, Power_production, Profit, Forebay_level, Tail_level, Head = recalculate_variables(params, results; type, power, e)
+    Eff_discharge, Power_production, Profit, Forebay_level, tail_level, Head = recalculate_variables(params, results; type, power, e)
     for t in date_TIME, p in PPLANT
-        set_start_value(results2.Tail_level[t, p], Tail_level[t, p])
+        set_start_value(results2.tail_level[p], tail_level[p])
         set_start_value(results2.Head[t,p], Head[t,p])
         for j in TURBINE[p]
             set_start_value(results2.Eff_discharge[t,p,j], Eff_discharge[t,p,j])
@@ -198,21 +198,21 @@ function recalculate_variables(params, results; type, power, e)
     @unpack date_TIME, PLANT, PPLANT, SEGMENT, plantinfo, turbineinfo, realplants, downstream, TURBINE, spot_price, grav, dens, WtoMW, minhead, maxhead, ed_coeff,
             end_rampseg, k_firstseg, k_segcoeff, m_segcoeff, k_segcoeff_origo, m_segcoeff_origo,
             tailrace_constant, tailrace_per_dischargelags, tailrace_per_downstreamforebay, discharge_downstream, LAGS,
-            min_level, max_level = params
+            min_level, max_level, tail_level = params
     
     if typeof(results.Power_production) <: JuMP.Containers.SparseAxisArray
-        Discharge, Head, Eff_discharge, Power_production, Forebay_level, Tail_level =
-            value.(results.Discharge), value.(results.Head), value.(results.Eff_discharge), value.(results.Power_production), value.(results.Forebay_level), value.(results.Tail_level)
+        Discharge, Head, Eff_discharge, Power_production, Forebay_level =
+            value.(results.Discharge), value.(results.Head), value.(results.Eff_discharge), value.(results.Power_production), value.(results.Forebay_level), value.(results.tail_level)
     else
-        @unpack Discharge, Head, Eff_discharge, Power_production, Forebay_level, Tail_level = results
+        @unpack Discharge, Head, Eff_discharge, Power_production, Forebay_level = results
     end
 
     for t in date_TIME, p in PPLANT
-        Tail_level[t, p] = tailrace_constant[p] +
-            sum(tailrace_per_dischargelags[p,n] * sum(Discharge[dtshift(date_TIME,t,n), p, j] for j in TURBINE[p]) for n in LAGS) + ((downstream[p] == [:Hav]) ? 0.0 :
-            tailrace_per_downstreamforebay[p] * Forebay_level[t, discharge_downstream[p]])
+        #Tail_level[t, p] = tailrace_constant[p] +
+        #    sum(tailrace_per_dischargelags[p,n] * sum(Discharge[dtshift(date_TIME,t,n), p, j] for j in TURBINE[p]) for n in LAGS) + ((downstream[p] == [:Hav]) ? 0.0 :
+        #    tailrace_per_downstreamforebay[p] * Forebay_level[t, discharge_downstream[p]])
 
-        Head[t,p] = Forebay_level[t, p] - Tail_level[t, p]
+        Head[t,p] = Forebay_level[t, p] - tail_level[p]
 
         for j in TURBINE[p]
             if e == "cv segments origo"
@@ -234,5 +234,5 @@ function recalculate_variables(params, results; type, power, e)
 
     Profit = sum(sum(Power_production[t,p,j] for p in PPLANT for j in TURBINE[p]) * spot_price[t] for t in date_TIME) / 1e6
     
-    return Eff_discharge, Power_production, Profit, Forebay_level, Tail_level, Head
+    return Eff_discharge, Power_production, Profit, Forebay_level, tail_level, Head
 end

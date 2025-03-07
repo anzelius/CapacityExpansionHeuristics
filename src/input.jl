@@ -262,10 +262,11 @@ function read_inputdata(river, start_dt, end_dt, objective, model, scenario; env
     end
 
     for p in PPLANT
-        per_discharge_min = minimum([0, sum(tailrace_per_dischargelags[p,n] for n in LAGS) * sum(turbineinfo[p,j].maxdischarge for j in TURBINE[p])])
+        per_discharge_min = minimum([0, sum(tailrace_per_dischargelags[p,n] for n in LAGS) * sum(turbineinfo[p,j].maxdischarge for j in ORG_TURBINE[river][p])])
         per_downstream_forebay_min = (p == PLANT[end]) ? 0.0 : minimum([tailrace_per_downstreamforebay[p] * minimum([min_level[t,discharge_downstream[p],:forebay] for t in date_TIME]), tailrace_per_downstreamforebay[p] * maximum([max_level[t,discharge_downstream[p],:forebay] for t in date_TIME])])
-        per_discharge_max = maximum([0, sum(tailrace_per_dischargelags[p,n] for n in LAGS) * sum(turbineinfo[p,j].maxdischarge for j in TURBINE[p])])
+        per_discharge_max = maximum([0, sum(tailrace_per_dischargelags[p,n] for n in LAGS) * sum(turbineinfo[p,j].maxdischarge for j in ORG_TURBINE[river][p])])
         per_downstream_forebay_max = (p == PLANT[end]) ? 0.0 : maximum([tailrace_per_downstreamforebay[p] * minimum([min_level[t,discharge_downstream[p],:forebay] for t in date_TIME]), tailrace_per_downstreamforebay[p] * maximum([max_level[t,discharge_downstream[p],:forebay] for t in date_TIME])])
+        #println("TAILRACE_PER_DISCHARGELAGS: ", sum(tailrace_per_dischargelags[p,n] for n in LAGS))
         for t in date_TIME
         min_level[t,p,:tail] = tailrace_constant[p] + per_discharge_min + per_downstream_forebay_min
         max_level[t,p,:tail] = tailrace_constant[p] + per_discharge_max + per_downstream_forebay_max
@@ -282,7 +283,7 @@ function read_inputdata(river, start_dt, end_dt, objective, model, scenario; env
     ##### Setting max and min head in the model #####
     maxhead = Dict{Symbol, Float64}(p => (max_level[date_TIME[1], p, :forebay] - min_level[date_TIME[1], p, :tail]) for p in PPLANT) #m.a.s
     minhead = Dict{Symbol, Float64}(p => (min_level[date_TIME[1], p, :forebay] - max_level[date_TIME[1], p, :tail]) for p in PPLANT) #m.a.s
-
+    tail_level = Dict{Symbol, Float64}(p => ((max_level[date_TIME[1], p, :tail] + min_level[date_TIME[1], p, :tail])/2) for p in PPLANT) 
     #--------------------------------------------------------------------------------------------
 
     ##### Print out control values #####
@@ -500,7 +501,7 @@ function read_inputdata(river, start_dt, end_dt, objective, model, scenario; env
             k_firstseg, end_rampseg, end_zeroseg, end_zeroseg_poly, end_origoseg,
             k_segcoeff, m_segcoeff, k_segcoeff_origo, m_segcoeff_origo, ed_coeff,
             maxhead, minhead, reservoir_start, reservoir_end, reservoir_area,
-            tailrace_per_dischargelags, tailrace_per_downstreamforebay, tailrace_constant)
+            tailrace_per_dischargelags, tailrace_per_downstreamforebay, tailrace_constant, tail_level)
 end
 
 
