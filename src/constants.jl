@@ -117,6 +117,7 @@ struct ConnectionsGraph
 end 
 
 global NUM_REAL_PLANTS = 0 
+ORG_TURBINE = Dict{}()
 for river in rivers 
     plants = PLANTINFO[river] 
     turbines = TURBINEINFO[river]
@@ -127,6 +128,7 @@ for river in rivers
     realplants = [plantinfo[p].nr_turbines != 0 for p in PLANT]
     PPLANT = PLANT[realplants]
     TURBINE = Dict(plantinfo[p].nr_turbines > 0 ? p => collect(1:plantinfo[p].nr_turbines) : p => Int[] for p in PLANT)
+    ORG_TURBINE[river] = copy(TURBINE)
     global NUM_REAL_PLANTS += length(PPLANT)
 end
 
