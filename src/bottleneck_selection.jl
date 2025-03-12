@@ -68,7 +68,7 @@ function head_x_discharge_based(river_bottlenecks_all)
     for river in rivers 
         for plant in PLANTINFO[river]
             if haskey(river_bottlenecks_all[river], plant.name)
-                discharge = river_bottlenecks_all[river][plant]
+                discharge = river_bottlenecks_all[river][plant.name]
                 all_plants[plant.name] = plant.meanhead * discharge 
             end 
         end 
