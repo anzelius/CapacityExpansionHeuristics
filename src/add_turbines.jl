@@ -249,7 +249,7 @@ function increase_discharge_and_new_turbines(river, river_bottlenecks, modify_ef
                     if modify_efficieny_curve
                         turbine.meandischarge = turbine.meandischarge/turbine.maxdischarge * (turbine.maxdischarge + discharge_to_increase)
                         turbine.maxdischarge += discharge_to_increase
-                        turbine.etapoints = [(d=p.d, e=p.e + discharge_to_increase) for p in turbine.etapoints]
+                        turbine.etapoints = [(d=p.d + discharge_to_increase, e=p.e) for p in turbine.etapoints]
                     else
                         turbine.maxdischarge += discharge_to_increase
                     end 
@@ -321,7 +321,7 @@ function increase_discharge(river, river_bottlenecks, modify_efficieny_curve=tru
                     if modify_efficieny_curve
                         turbine.meandischarge = turbine.meandischarge/turbine.maxdischarge * (turbine.maxdischarge + discharge_to_increase)
                         turbine.maxdischarge += discharge_to_increase
-                        turbine.etapoints = [(d=p.d, e=p.e + discharge_to_increase) for p in turbine.etapoints]
+                        turbine.etapoints = [(d=p.d + discharge_to_increase, e=p.e) for p in turbine.etapoints]
                     else
                         turbine.maxdischarge += discharge_to_increase
                     end 
