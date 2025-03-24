@@ -184,7 +184,7 @@ function set_start_values!(params, results, results2; type, power, e)
     @unpack date_TIME, PLANT, PPLANT, TURBINE, tail_level = params
     Eff_discharge, Power_production, Profit, Forebay_level, Head = recalculate_variables(params, results; type, power, e)
     for t in date_TIME, p in PPLANT
-        set_start_value(tail_level[p], tail_level[p])
+        #set_start_value(tail_level[p], tail_level[p])
         set_start_value(results2.Head[t,p], Head[t,p])
         for j in TURBINE[p]
             set_start_value(results2.Eff_discharge[t,p,j], Eff_discharge[t,p,j])

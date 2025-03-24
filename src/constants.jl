@@ -118,6 +118,7 @@ end
 
 global NUM_REAL_PLANTS = 0 
 ORG_TURBINE = Dict{}()
+global ORG_MAX_DISCHARGE = Dict{}()
 for river in rivers 
     plants = PLANTINFO[river] 
     turbines = TURBINEINFO[river]
@@ -130,5 +131,11 @@ for river in rivers
     TURBINE = Dict(plantinfo[p].nr_turbines > 0 ? p => collect(1:plantinfo[p].nr_turbines) : p => Int[] for p in PLANT)
     ORG_TURBINE[river] = copy(TURBINE)
     global NUM_REAL_PLANTS += length(PPLANT)
+    river_max_discharge = Dict{}()
+    for p in PPLANT
+        max_d = sum(turbineinfo[p,j].maxdischarge for j in TURBINE[p])
+        river_max_discharge[p] = max_d 
+    end
+    global ORG_MAX_DISCHARGE[river] = river_max_discharge
 end
 

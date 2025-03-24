@@ -275,8 +275,10 @@ function printbasicresults(params, results; type, power, e, recalculate=false)
 
     pp = value.(Power_production) 
     sum_result = [sum(pp[t, :, :]) for t in date_TIME]
+    println("Top power (MW): ", maximum(sum_result))
+    top_power_date = date_TIME[argmax(sum_result)] 
+    println("Date: $top_power_date")
 
-    println("Max power output (MW): ", maximum(sum_result))
     #open("results.txt", "a") do file
     #    write(file, "\n" * string(Float64(maximum(sum_result))) * "\n")
     #end
@@ -289,5 +291,15 @@ function printbasicresults(params, results; type, power, e, recalculate=false)
         println("Recalculated Total power production (TWh): ", round(sum(powerproduction)/1e6, digits=2))
         captured_price_recalculated = round(profit*1e6/sum(powerproduction), digits = 2)
         println("Recalculated Captured price (SEK/MWh): ", captured_price_recalculated)
+        
+        sum_result2 = [sum(powerproduction[t, :, :]) for t in date_TIME]
+        println("Recalculated top power (MW): ", maximum(sum_result2))
     end
+    println("Discharge usage at top power: ")
+    d = value.(Discharge) 
+    for p in PPLANT
+        println("$p : $(sum(d[top_power_date, p, :]))")
+    end 
+    #sum_d = [sum(d[:, p, :]) for p in PPLANT]
+
 end

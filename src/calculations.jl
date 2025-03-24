@@ -4,8 +4,8 @@ include("bottlenecks.jl")
 ############################
 # theoretical power calculated P_new = k * Q_new 
 ############################
-connections, river_bottlenecks = create_connection_graph(true, "MQ")
-#river_bottlenecks = get_river_bottlenecks(connections, river_bottlenecks)
+connections, river_bottlenecks = create_connection_graph(false, "MQ")
+river_bottlenecks = get_river_bottlenecks(connections, river_bottlenecks)
 tot_max_discharge = 0 
 tot_reported_capacity = 0
 for river in rivers
@@ -27,10 +27,12 @@ for river in rivers
         global tot_reported_capacity += isfinite(plant.ncap) ? plant.ncap : 0 
     end 
 end 
-
+model_no_new_turbines = 15679
+k_new = model_no_new_turbines / tot_max_discharge
 k = tot_reported_capacity / tot_max_discharge
 println("reported capacity (MW): $tot_reported_capacity")
-
+println("k: ", k) 
+println("k new: ", k_new)
 tot_missing_discharge = 0 
 for river in rivers 
     for (plant, missing_discharge) in river_bottlenecks[river]
@@ -38,9 +40,12 @@ for river in rivers
     end 
 end 
 
+println("Added discharge: ", tot_missing_discharge)
+println("Tot max discharge: ", tot_max_discharge)
 new_capacity = k * (tot_max_discharge + tot_missing_discharge)
 println("new theoretical capacity (MW): $new_capacity") 
-println("Diff in theoretical capacity and repoted capacity: $(new_capacity - tot_reported_capacity)")
+println("capacity with model no turbines: ", k_new * (tot_max_discharge + tot_missing_discharge))
+println("Diff in theoretical capacity and reported capacity: $(new_capacity - tot_reported_capacity)")
 
 ############################
 # calculate how 'different' turbines installed at each plant are 
