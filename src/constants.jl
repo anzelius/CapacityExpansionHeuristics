@@ -1,11 +1,11 @@
 import Pkg
 Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
-
 using JuMP, Gurobi, Ipopt, AxisArrays, UnPack, FileIO, Statistics,
       StatsPlots, Plots.PlotMeasures, Dates, FilePathsBase, CategoricalArrays
 using Plots: plot, plot!
 
-
+original_stdout = stdout
+log_file_name = "kladd2.txt" 
 mutable struct Plant
     name::Symbol
     nr_turbines::Int                        # nr
@@ -118,6 +118,7 @@ end
 
 global NUM_REAL_PLANTS = 0 
 ORG_TURBINE = Dict{}()
+ORG_TURBINEINFO = Dict{}()
 global ORG_MAX_DISCHARGE = Dict{}()
 for river in rivers 
     plants = PLANTINFO[river] 
@@ -129,7 +130,8 @@ for river in rivers
     realplants = [plantinfo[p].nr_turbines != 0 for p in PLANT]
     PPLANT = PLANT[realplants]
     TURBINE = Dict(plantinfo[p].nr_turbines > 0 ? p => collect(1:plantinfo[p].nr_turbines) : p => Int[] for p in PLANT)
-    ORG_TURBINE[river] = copy(TURBINE)
+    ORG_TURBINE[river] = deepcopy(TURBINE)
+    ORG_TURBINEINFO[river] = deepcopy(turbines)
     global NUM_REAL_PLANTS += length(PPLANT)
     river_max_discharge = Dict{}()
     for p in PPLANT
