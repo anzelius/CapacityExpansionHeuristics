@@ -23,6 +23,8 @@ function create_new_node(plant_name, turbineinfo, TURBINE, flow_values, plant_bo
             max_discharge = flow_values[plant_name] 
             if max_discharge > tot_turbine_discharge
                 plant_bottleneck_value[plant_name] = get!(plant_bottleneck_value, plant_name, 0) + (max_discharge - tot_turbine_discharge)
+            else 
+                max_discharge = tot_turbine_discharge
             end 
         else
             max_discharge = tot_turbine_discharge
