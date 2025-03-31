@@ -1,7 +1,8 @@
 include("runs.jl")
 
 
-function run_scenario_month(log_to_file=true, file_name="test.txt", expansion_method="Bottlenecks")
+function run_scenario_month(log_to_file=true, file_name="test.txt", expansion_method="Bottlenecks",
+    year=2019)
 
     if expansion_method == "Bottlenecks"
         connections, river_bottlenecks_all = create_connection_graph(false)
@@ -23,7 +24,7 @@ function run_scenario_month(log_to_file=true, file_name="test.txt", expansion_me
 
     for start_month in 1:12 
         end_month = start_month
-        start_year, end_year = 2019, 2020   
+        start_year, end_year = year, year+1   
         end_month = end_month < 10 ? end_month : "0$end_month" 
         start_month = start_month < 10 ? start_month : "0$start_month"
         reduce_bottlenecks_flag = (start_month == 1 && reduce_bottlenecks_flag) ? true : false 
@@ -88,7 +89,7 @@ function run_scenario_month(log_to_file=true, file_name="test.txt", expansion_me
     end 
     if log_to_file
         open(file_name, "a") do io
-            write(io, "$expansion_method\n")
+            write(io, "$expansion_method, $year\n")
             write(io, "Failed for $(length(failed_rivers)) river: $failed_rivers\n")
             write(io, "#New turbines: $num_new_turbines_percentile\n")
             write(io, "#Turbine upgrades: $num_turbine_upgrades_percentile\n")
