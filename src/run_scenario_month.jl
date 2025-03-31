@@ -71,7 +71,6 @@ function run_scenario_month(log_to_file=true, file_name="test.txt", expansion_me
                 d = value.(Discharge) 
                 for p in PPLANT
                     plant_usage_top = sum(d[top_power_date, p, :])
-                    println("$p : $plant_usage_top")
                     discharge_usage[river, p, start_month] = plant_usage_top
                 end 
             end 
