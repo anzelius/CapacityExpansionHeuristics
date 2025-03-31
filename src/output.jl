@@ -264,7 +264,6 @@ end
 function printbasicresults(params, results; type, power, e, recalculate=false)
     @unpack rivermodel, Power_production, Discharge, Reservoir_content = results
     @unpack PLANT, PPLANT, TURBINE, date_TIME, realplants, spot_price = params
-    #println(value.(Discharge)) 
     println("Profit (Million SEK): ", round(objective_value(rivermodel), digits=2))
     try
         println("Best bound: ", objective_bound(rivermodel))
@@ -279,10 +278,6 @@ function printbasicresults(params, results; type, power, e, recalculate=false)
     top_power_date = date_TIME[argmax(sum_result)] 
     println("Date: $top_power_date")
 
-    #open("results.txt", "a") do file
-    #    write(file, "\n" * string(Float64(maximum(sum_result))) * "\n")
-    #end
-
     captured_price = round(objective_value(rivermodel)*1e6/sum(value.(Power_production)), digits = 2)
     println("Captured price (SEK/MWh): ", captured_price)
     if recalculate
@@ -295,11 +290,10 @@ function printbasicresults(params, results; type, power, e, recalculate=false)
         sum_result2 = [sum(powerproduction[t, :, :]) for t in date_TIME]
         println("Recalculated top power (MW): ", maximum(sum_result2))
     end
-    println("Discharge usage at top power: ")
-    d = value.(Discharge) 
-    for p in PPLANT
-        println("$p : $(sum(d[top_power_date, p, :]))")
-    end 
-    #sum_d = [sum(d[:, p, :]) for p in PPLANT]
-
+    #println("Discharge usage at top power: ")
+    #d = value.(Discharge) 
+    #for p in PPLANT
+    #    println("$p : $(sum(d[top_power_date, p, :]))")
+    #end 
+#sum_d = [sum(d[:, p, :]) for p in PPLANT]
 end

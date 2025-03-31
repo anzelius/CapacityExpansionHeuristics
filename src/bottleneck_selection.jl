@@ -2,11 +2,11 @@
 using StatsBase
 
 
-function get_upgrades_iteration(all_plants)
+function get_upgrades_iteration(all_plants, percentiles)
     meanheads = collect(values(all_plants))
     sorted_values = sort(meanheads)
     sorted_values = filter(!isnan, sorted_values)
-    percentile_levels = 10:10:100
+    percentile_levels = percentiles
     top_percentile_groups = Dict()
 
     for p in percentile_levels
@@ -34,7 +34,7 @@ function get_upgrades_iteration(all_plants)
 end
 
 
-function head_based(river_bottlenecks_all)
+function head_based(river_bottlenecks_all, percentiles)
     all_plants = Dict{Symbol, Float64}()
     for river in rivers 
         for plant in PLANTINFO[river]
@@ -44,13 +44,13 @@ function head_based(river_bottlenecks_all)
         end 
     end 
 
-    plant_upgrades_each_iteration = get_upgrades_iteration(all_plants)
+    plant_upgrades_each_iteration = get_upgrades_iteration(all_plants, percentiles)
 
     return plant_upgrades_each_iteration 
 end 
 
 
-function discharge_increase_based(river_bottlenecks_all)
+function discharge_increase_based(river_bottlenecks_all, percentiles)
     all_plants = Dict{Symbol, Float64}()
     for river in rivers 
         for (plant, discharge) in river_bottlenecks_all[river]
@@ -58,12 +58,12 @@ function discharge_increase_based(river_bottlenecks_all)
         end 
     end 
 
-    plant_upgrades_each_iteration = get_upgrades_iteration(all_plants)
+    plant_upgrades_each_iteration = get_upgrades_iteration(all_plants, percentiles)
 
     return plant_upgrades_each_iteration 
 end 
 
-function head_x_discharge_based(river_bottlenecks_all)
+function head_x_discharge_based(river_bottlenecks_all, percentiles)
     all_plants = Dict{Symbol, Float64}()
     for river in rivers 
         for plant in PLANTINFO[river]
@@ -73,7 +73,7 @@ function head_x_discharge_based(river_bottlenecks_all)
             end 
         end 
     end 
-    plant_upgrades_each_iteration = get_upgrades_iteration(all_plants)
+    plant_upgrades_each_iteration = get_upgrades_iteration(all_plants, percentiles)
     return plant_upgrades_each_iteration 
 
 end 

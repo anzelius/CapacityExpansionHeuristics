@@ -11,6 +11,7 @@ include("env_con_functions.jl")
 include("helpfunctions.jl")
 include("analyze.jl")
 
+
 function run_model_river(river::Symbol, start_datetime::String, end_datetime::String, 
     objective::String, model::String, scenario::String; recalc::NamedTuple=(;), 
     save_variables=true, silent=true, high_demand_trig=false, high_demand_datetime="2016-01-15T08", 
@@ -34,9 +35,9 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
         elseif reduce_bottlenecks_method == "new_turbines_and_increase_discharge" 
             num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = increase_discharge_and_new_turbines(river, bottleneck_values) # biggest_turbine_first(river, bottleneck_values)
         elseif reduce_bottlenecks_method == "increase_discharge"
-            num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades = increase_discharge(river, bottleneck_values) 
+            num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = increase_discharge(river, bottleneck_values) 
         elseif reduce_bottlenecks_method == "new_turbines_similar"
-            num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_new_turbines = new_same_or_similar_turbines(river, bottleneck_values)
+            num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = new_same_or_similar_turbines(river, bottleneck_values)
         end
     end
     
@@ -74,7 +75,7 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     end
 
     println("\n\nBuilding second model (because modifying JuMP models is super slow)...")
-    @time results2 = buildmodel(params, start_datetime, end_datetime, objective; run2args...)
+    @time results2 = buildmodel(params, start_datetime, end_datetime, end_start_constraints, objective; run2args...)
     rivermodel2 = results2.rivermodel
 
     println("\nSetting variable start values to LP result...")
@@ -96,7 +97,7 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     printbasicresults(params, results2; run2args..., recalculate=false)
     save_variables && savevariables(river, params, start_datetime, end_datetime, objective, "NonLinear", scenario, results2, solve_time(rivermodel2))
 
-    return status #rivermodel2, params, results2
+    return (results2, params, num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines) #status #rivermodel2, params, results2
 end
 
 
@@ -165,78 +166,129 @@ function run_all_rivers()
     river_bottlenecks_all = get_river_bottlenecks(connections, river_bottlenecks_all)
     failed_rivers = [] 
     total_max_power_production = []
-    tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants = 0, 0, 0
-    
-    #PLANTINFO[:Indalsälven][14].nr_turbines = 117
-    #for i in 4:117
-    #    new_turbine = Turbine((:Hissmofors,i)      , 201,  126,  0.92,  [(d=50, e=0.85),(d=125, e=0.93),(d=200, e=0.92)])
-    #    push!(TURBINEINFO[:Indalsälven], new_turbine)
-    #end 
-    
+    tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_discharge_upgrades, 
+    tot_discharge_new_turbines, tot_profit, tot_captured_price,
+    tot_power_production = 0, 0, 0, 0, 0, 0, 0, 0
+    #tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_increased_discharge = 0, 0, 0, 0
+
     for river in rivers
-        model_results = run_model_river(river, "2019-01-01T08", "2019-01-07T08", "Profit", "Linear", "Inga miljövillkor", 
-        save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-02T15", 
+        model_results = run_model_river(river, "2019-01-01T08", "2019-01-31T08", "Profit", "Linear", "Dagens miljövillkor", 
+        save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-15T15", 
         end_start_constraints=false, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
         bottleneck_values=river_bottlenecks_all)  
 
         if isnothing(model_results) 
             push!(failed_rivers, river) 
         else 
-            results, params, num_new_turbines, num_turbine_upgrades, num_upgraded_plants = model_results
-            @unpack Power_production = results
+            results, params, num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = model_results
+            @unpack Power_production, rivermodel = results
             @unpack date_TIME = params 
             pp = value.(Power_production) 
             sum_result = [sum(pp[t, :, :]) for t in date_TIME]
+            
             max_achieved_power_production = maximum(sum_result)
             push!(total_max_power_production, max_achieved_power_production) 
-
+            profit = round(objective_value(rivermodel), digits=6)
+            captured_price = round(objective_value(rivermodel)*1e6/sum(value.(Power_production)), digits=6)
+            power_production = round(sum(value.(Power_production))/1e6, digits=6)
             tot_new_turbines += num_new_turbines
             tot_turbine_upgrades += num_turbine_upgrades
             tot_upgraded_plants += num_upgraded_plants
-        end 
+            tot_discharge_upgrades += increased_discharge_upgrades
+            tot_discharge_new_turbines += increased_discharge_new_turbines
+            tot_profit += profit
+            tot_captured_price += captured_price
+            tot_power_production += power_production
+            
+        end  
     end 
-    println("NO NEW TURBINES, NO START/END CONSTRAINTS, 1V HIGH PRICE D2")
-
+    println("============================================= Aggregated results =============================================")
     println("failed for $(length(failed_rivers)) river: $failed_rivers")
-    println("Total max power production: $(sum(total_max_power_production))")
-    
+    println("Total top power: $(sum(total_max_power_production))")
+    tot_increased_discharge = tot_discharge_upgrades + tot_discharge_new_turbines
     println("#New turbines: $tot_new_turbines")
     println("#Turbine upgrades: $tot_turbine_upgrades")
     println("#Plant upgrades: $tot_upgraded_plants") 
-
-    print_bottleneck_stats(river_bottlenecks_all)
-
+    println("Total increased discharge: $tot_increased_discharge")
+    println("Profit: $tot_profit")
+    println("Captured price: $tot_captured_price")
+    println("Power production: $tot_power_production")
+    
+    print_bottleneck_stats(river_bottlenecks_all) 
 end 
-run_all_rivers()
+#run_all_rivers()
 
-function run_scenario()
-    connections, river_bottlenecks_all = create_connection_graph()
-    river_bottlenecks_all = get_river_bottlenecks(connections, river_bottlenecks_all)
-    plant_upgrades = head_x_discharge_based(river_bottlenecks_all) # : discharge_increase_based(river_bottlenecks_all)
-    failed_rivers = [] 
-    power_production_percentile = []
-    num_new_turbines_percentile, num_turbine_upgrades_percentile, num_upgraded_plants_percentile, discharge_upgrades_percentile, discharge_new_turbines_percentile = [], [], [], [], [] 
-    for percentile in 10:10:100 
+function run_scenario(log_to_file=true, file_name="test.txt", expansion_method="Bottlenecks", 
+    percentile_method="Head times discharge", percentiles=10:10:100, start_date="2019-01-01T08", 
+    end_date="2019-01-07T08", high_demand="2019-01-02T15")
+
+    if expansion_method == "Bottlenecks"
+        connections, river_bottlenecks_all = create_connection_graph(false)
+        river_bottlenecks_all = get_river_bottlenecks(connections, river_bottlenecks_all)
+        reduce_bottlenecks_flag = true 
+    elseif isnothing(expansion_method) 
+        river_bottlenecks_all = nothing 
+        reduce_bottlenecks_flag = false 
+    else
+        connections, river_bottlenecks_all = create_connection_graph(true, expansion_method) 
+        reduce_bottlenecks_flag = true 
+    end 
+
+    if percentile_method == "Discharge"
+        plant_upgrades = discharge_increase_based(river_bottlenecks_all, percentiles)
+    elseif isnothing(percentile_method)
+        plant_upgrades[percentiles] = river_bottlenecks_all
+    elseif percentile_method == "Head" 
+        plant_upgrades = head_based(river_bottlenecks_all, percentiles)
+    else 
+        plant_upgrades = head_x_discharge_based(river_bottlenecks_all, percentiles)
+    end 
+
+    if !isnothing(high_demand)
+        high_demand_flag = true
+    else
+        high_demand_flag = false
+    end  
+
+    num_new_turbines_percentile, num_turbine_upgrades_percentile, num_upgraded_plants_percentile, 
+    discharge_upgrades_percentile, discharge_new_turbines_percentile, profit_percentile, 
+    captured_price_percentile, top_power_percentile, power_production_percentile, 
+    failed_rivers, top_power_dates = [], [], [], [], [], [], [], [], [], [], []   
+
+    for percentile in percentiles
         plants_to_upgrade = plant_upgrades[percentile]
-        total_max_power_production = []
-        tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_discharge_upgrades, tot_discharge_new_turbines = 0, 0, 0, 0, 0
+        tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_discharge_upgrades, 
+        tot_discharge_new_turbines, tot_profit, tot_captured_price, tot_top_power,
+        tot_power_production = 0, 0, 0, 0, 0, 0, 0, 0, 0
         for river in rivers 
             river_bottlenecks = Dict(river => Dict(plant => value for (plant, value) in river_bottlenecks_all[river] if plant in plants_to_upgrade)) 
-            model_results = run_model_river(river, "2019-01-01T08", "2019-01-07T08", "Profit", "Linear", "Dagens miljövillkor", 
-            save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="2019-01-02T15", 
-            end_start_constraints=false, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_small_and_big",
+            
+            model_results = run_model_river(river, start_date, end_date, "Profit", "Linear", "Dagens miljövillkor", 
+            save_variables=false, silent=true, high_demand_trig=high_demand_flag, high_demand_datetime=high_demand, 
+            end_start_constraints=false, reduce_bottlenecks=reduce_bottlenecks_flag, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
             bottleneck_values=river_bottlenecks)  
 
             if isnothing(model_results) 
                 push!(failed_rivers, river) 
             else 
                 results, params, num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = model_results
-                @unpack Power_production = results
+                @unpack Power_production, rivermodel = results
                 @unpack date_TIME = params 
+
                 pp = value.(Power_production) 
                 sum_result = [sum(pp[t, :, :]) for t in date_TIME]
-                max_achieved_power_production = maximum(sum_result)
-                push!(total_max_power_production, max_achieved_power_production) 
+                max_achieved_power = maximum(sum_result)
+                top_power_date = date_TIME[argmax(sum_result)] 
+                push!(top_power_dates, top_power_date)
+
+                profit = round(objective_value(rivermodel), digits=6)
+                captured_price = round(objective_value(rivermodel)*1e6/sum(value.(Power_production)), digits=6)
+                power_production = round(sum(value.(Power_production))/1e6, digits=6)
+                
+                tot_profit += profit 
+                tot_captured_price += captured_price
+                tot_power_production += power_production
+                tot_top_power += max_achieved_power
 
                 tot_discharge_upgrades += increased_discharge_upgrades
                 tot_discharge_new_turbines += increased_discharge_new_turbines
@@ -251,21 +303,41 @@ function run_scenario()
         push!(num_turbine_upgrades_percentile, tot_turbine_upgrades) 
         push!(num_upgraded_plants_percentile, tot_upgraded_plants)
         push!(discharge_upgrades_percentile, tot_discharge_upgrades)
-        push!(discharge_new_turbines_percentile, tot_discharge_new_turbines)
-
-        println("failed for $(length(failed_rivers)) river: $failed_rivers")
-        println("Total max power production: $(sum(total_max_power_production))")
-        push!(power_production_percentile, sum(total_max_power_production))
+        push!(discharge_new_turbines_percentile, tot_discharge_new_turbines)        
+        push!(top_power_percentile, tot_top_power)
+        push!(profit_percentile, tot_profit)
+        push!(captured_price_percentile, tot_captured_price)
+        push!(power_production_percentile, tot_power_production)
     end 
-    println("#New turbines: $num_new_turbines_percentile")
-    println("#Turbine upgrades: $num_turbine_upgrades_percentile")
-    println("#Plant upgrades: $num_upgraded_plants_percentile") 
-    println("Power production: $power_production_percentile")
-    println("Discharge upgraded turbines: ", discharge_upgrades_percentile)
-    println("Discharge new turbines: ", discharge_new_turbines_percentile)
-
-    print_bottleneck_stats(river_bottlenecks_all)
-
+    if log_to_file
+        open(file_name, "a") do io
+            write(io, "$expansion_method, $percentile_method, $percentiles, $start_date, $end_date, $high_demand\n")
+            write(io, "Failed for $(length(failed_rivers)) river: $failed_rivers\n")
+            write(io, "#New turbines: $num_new_turbines_percentile\n")
+            write(io, "#Turbine upgrades: $num_turbine_upgrades_percentile\n")
+            write(io, "#Plant upgrades: $num_upgraded_plants_percentile\n")
+            write(io, "Discharge upgraded turbines: $discharge_upgrades_percentile\n")
+            write(io, "Discharge new turbines: $discharge_new_turbines_percentile\n")
+            write(io, "Top power: $top_power_percentile\n")
+            write(io, "Profit: $profit_percentile\n")
+            write(io, "Captured price: $captured_price_percentile\n")
+            write(io, "Total power production: $power_production_percentile\n")
+            write(io, "$top_power_dates\n")
+        end
+    else
+        println("Failed for $(length(failed_rivers)) river: $failed_rivers")
+        println("#New turbines: $num_new_turbines_percentile")
+        println("#Turbine upgrades: $num_turbine_upgrades_percentile")
+        println("#Plant upgrades: $num_upgraded_plants_percentile") 
+        println("Discharge upgraded turbines: ", discharge_upgrades_percentile)
+        println("Discharge new turbines: ", discharge_new_turbines_percentile)
+        println("Top power: $top_power_percentile")
+        println("Profit: $profit_percentile")
+        println("Captured price: $captured_price_percentile")
+        println("Total power production: $power_production_percentile")
+        print_bottleneck_stats(river_bottlenecks_all)
+        println(top_power_dates)
+    end 
 end 
 
-#run_scenario()
+run_scenario()

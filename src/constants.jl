@@ -1,11 +1,10 @@
 import Pkg
 Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
 using JuMP, Gurobi, Ipopt, AxisArrays, UnPack, FileIO, Statistics,
-      StatsPlots, Plots.PlotMeasures, Dates, FilePathsBase, CategoricalArrays
+      StatsPlots, Plots.PlotMeasures, Dates, FilePathsBase, CategoricalArrays, DataFrames, XLSX, JLD2
 using Plots: plot, plot!
 
-original_stdout = stdout
-log_file_name = "kladd2.txt" 
+
 mutable struct Plant
     name::Symbol
     nr_turbines::Int                        # nr
