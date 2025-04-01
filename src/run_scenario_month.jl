@@ -1,7 +1,7 @@
 include("runs.jl")
 
 
-function run_scenario_month(log_to_file=true, file_name="test.txt", expansion_method="Bottlenecks",
+function run_scenario_month(log_to_file=true, file_name="monthly1.txt", expansion_method="Bottlenecks",
     year=2019)
 
     if expansion_method == "Bottlenecks"
@@ -20,22 +20,31 @@ function run_scenario_month(log_to_file=true, file_name="test.txt", expansion_me
     discharge_upgrades_percentile, discharge_new_turbines_percentile, profit_percentile, 
     captured_price_percentile, top_power_percentile, power_production_percentile, 
     failed_rivers, top_power_dates = [], [], [], [], [], [], [], [], [], [], []   
-    discharge_usage[r in rivers, p.name in PLANTINFO[r], m in 1:12] = 0 # [river, plant, discharge usage at top] 
+    discharge_usage = Dict() # [river, plant, discharge usage at top] 
+    
+    for r in rivers
+        for p in PLANTINFO[r]
+            for m in 1:12
+                discharge_usage[(r, p.name, m)] = 0
+            end
+        end
+    end
 
     for start_month in 1:12 
         end_month = start_month
         start_year, end_year = year, year+1   
-        end_month = end_month < 10 ? end_month : "0$end_month" 
-        start_month = start_month < 10 ? start_month : "0$start_month"
+        end_month = end_month >= 10 ? end_month : "0$end_month" 
+        start_month = start_month >= 10 ? start_month : "0$start_month"
         reduce_bottlenecks_flag = (start_month == 1 && reduce_bottlenecks_flag) ? true : false 
         #plants_to_upgrade = plant_upgrades[percentile]
         tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_discharge_upgrades, 
         tot_discharge_new_turbines, tot_profit, tot_captured_price, tot_top_power,
         tot_power_production = 0, 0, 0, 0, 0, 0, 0, 0, 0
+        high_demand_date = "$start_year-$start_month-07T08"
         for river in rivers 
             #river_bottlenecks = Dict(river => Dict(plant => value for (plant, value) in river_bottlenecks_all[river] if plant in plants_to_upgrade)) 
             model_results = run_model_river(river, "$start_year-$start_month-01T08", "$end_year-$end_month-01T08", "Profit", "Linear", "Dagens miljövillkor", 
-            save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime="$start_year-$start_month-07T08", 
+            save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime=high_demand_date, 
             end_start_constraints=true, reduce_bottlenecks=reduce_bottlenecks_flag, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
             bottleneck_values=river_bottlenecks_all)  
 
@@ -48,9 +57,10 @@ function run_scenario_month(log_to_file=true, file_name="test.txt", expansion_me
 
                 pp = value.(Power_production) 
                 sum_result = [sum(pp[t, :, :]) for t in date_TIME]
-                max_achieved_power = maximum(sum_result)
+                #max_achieved_power = maximum(sum_result)
                 top_power_date = date_TIME[argmax(sum_result)] 
                 push!(top_power_dates, top_power_date)
+                max_achieved_power = sum(pp[DateTime(high_demand_date), :, :])
 
                 profit = round(objective_value(rivermodel), digits=6)
                 captured_price = round(objective_value(rivermodel)*1e6/sum(value.(Power_production)), digits=6)
@@ -70,7 +80,7 @@ function run_scenario_month(log_to_file=true, file_name="test.txt", expansion_me
 
                 d = value.(Discharge) 
                 for p in PPLANT
-                    plant_usage_top = sum(d[top_power_date, p, :])
+                    plant_usage_top = sum(d[high_demand_date, p, :])
                     discharge_usage[river, p, start_month] = plant_usage_top
                 end 
             end 
