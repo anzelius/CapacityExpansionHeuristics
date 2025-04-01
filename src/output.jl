@@ -1,6 +1,6 @@
 using StatsBase, XLSX
 
-function savevariables(river, params, start_datetime, end_datetime, obj, model, scenario, results, solvetime)
+function savevariables(river, params, start_datetime, end_datetime, obj, model, scenario, results, solvetime, name)
     println("\nSaving variables to JLD2 archive...")
 
     folder = "$DATAFOLDER/$river/scenarios/$scenario/results"
@@ -49,7 +49,7 @@ function savevariables(river, params, start_datetime, end_datetime, obj, model, 
     )
 
     println("...saving jld2 file")
-    jldsave("$folder/$(start_datetime) to $(end_datetime) $obj $model $scenario.jld2"; vars..., data..., compress=true)
+    jldsave("$folder/$(start_datetime) to $(end_datetime) $obj $model $scenario.jld2 $name"; vars..., data..., compress=true)
 
     power_data = value.(results.Power_production).data
     t_h_p = Vector{Float64}(undef, length(params.date_TIME))
@@ -67,7 +67,7 @@ function savevariables(river, params, start_datetime, end_datetime, obj, model, 
 
     prod_df = DataFrame(total_hourly_production = t_h_p, date_TIME = params.date_TIME)
     println("...saving Excel files")
-    XLSX.openxlsx("$folder/Hela älven - $(start_datetime) to $(end_datetime) $obj $model $scenario - Produktion och intäkt.xlsx", mode="w") do xf
+    XLSX.openxlsx("$folder/Hela älven - $(start_datetime) to $(end_datetime) $obj $model $scenario - $name Produktion och intäkt.xlsx", mode="w") do xf
         sheet = xf[1]
         XLSX.rename!(sheet, "Produktion")
 
