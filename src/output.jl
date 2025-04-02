@@ -22,7 +22,7 @@ function savevariables(river, params, start_datetime, end_datetime, obj, model, 
         load_diff = value(results.Load_diff),
         power_production = power_production,
         reservoir_content = value.(results.Reservoir_content).data,
-        t_level = value.(results.Tail_level).data,
+        #t_level = value.(results.Tail_level).data,
         f_level = value.(results.Forebay_level).data,
         #head = value.(results.Head).data,
         discharge = discharge,
@@ -46,10 +46,11 @@ function savevariables(river, params, start_datetime, end_datetime, obj, model, 
         utskov_downstream = params.utskov_downstream,
         discharge_upstream = params.discharge_upstream,
         spot_price = params.spot_price,
+        t_level = params.tail_level,
     )
 
     println("...saving jld2 file")
-    jldsave("$folder/$(start_datetime) to $(end_datetime) $obj $model $scenario.jld2 $name"; vars..., data..., compress=true)
+    jldsave("$folder/$name $(start_datetime) to $(end_datetime) $obj $model $scenario.jld2"; vars..., data..., compress=true)
 
     power_data = value.(results.Power_production).data
     t_h_p = Vector{Float64}(undef, length(params.date_TIME))
@@ -67,7 +68,7 @@ function savevariables(river, params, start_datetime, end_datetime, obj, model, 
 
     prod_df = DataFrame(total_hourly_production = t_h_p, date_TIME = params.date_TIME)
     println("...saving Excel files")
-    XLSX.openxlsx("$folder/Hela älven - $(start_datetime) to $(end_datetime) $obj $model $scenario - $name Produktion och intäkt.xlsx", mode="w") do xf
+    XLSX.openxlsx("$folder/$name Hela älven - $(start_datetime) to $(end_datetime) $obj $model $scenario - Produktion och intäkt.xlsx", mode="w") do xf
         sheet = xf[1]
         XLSX.rename!(sheet, "Produktion")
 
