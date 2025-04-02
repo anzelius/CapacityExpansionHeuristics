@@ -33,6 +33,8 @@ function savevariables(river, params, start_datetime, end_datetime, obj, model, 
         solve_t = solvetime)
 
     data = (
+        plantinfo = params.plantinfo,
+        turbineinfo = params.turbineinfo,
         PLANT = params.PLANT,
         PPLANT = params.PPLANT,
         RES = params.RES,
