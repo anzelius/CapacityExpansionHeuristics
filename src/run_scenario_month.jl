@@ -1,7 +1,7 @@
 include("runs.jl")
 
 
-function run_scenario_month(log_to_file=true, file_name="monthly1.txt", expansion_method="Bottlenecks",
+function run_scenario_month(log_to_file=true, file_name="Bottlenecks monthly 2019", expansion_method="Bottlenecks",
     year=2019)
 
     if expansion_method == "Bottlenecks"
@@ -20,15 +20,6 @@ function run_scenario_month(log_to_file=true, file_name="monthly1.txt", expansio
     discharge_upgrades_percentile, discharge_new_turbines_percentile, profit_percentile, 
     captured_price_percentile, top_power_percentile, power_production_percentile, 
     failed_rivers, top_power_dates = [], [], [], [], [], [], [], [], [], [], []   
-    discharge_usage = Dict() # [river, plant, discharge usage at top] 
-    
-    for r in rivers
-        for p in PLANTINFO[r]
-            for m in 1:12
-                discharge_usage[(r, p.name, m)] = 0
-            end
-        end
-    end
 
     for start_month in 1:12 
         end_month = start_month
@@ -46,7 +37,7 @@ function run_scenario_month(log_to_file=true, file_name="monthly1.txt", expansio
             model_results = run_model_river(river, "$start_year-$start_month-01T08", "$end_year-$end_month-01T08", "Profit", "Linear", "Dagens miljövillkor", 
             save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime=high_demand_date, 
             end_start_constraints=true, reduce_bottlenecks=reduce_bottlenecks_flag, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
-            bottleneck_values=river_bottlenecks_all)  
+            bottleneck_values=river_bottlenecks_all, file_name="$file_name ($start_month)")  
 
             if isnothing(model_results) 
                 push!(failed_rivers, river) 
@@ -77,12 +68,6 @@ function run_scenario_month(log_to_file=true, file_name="monthly1.txt", expansio
                 tot_new_turbines += num_new_turbines
                 tot_turbine_upgrades += num_turbine_upgrades
                 tot_upgraded_plants += num_upgraded_plants
-
-                d = value.(Discharge) 
-                for p in PPLANT
-                    plant_usage_top = sum(d[high_demand_date, p, :])
-                    discharge_usage[river, p, start_month] = plant_usage_top
-                end 
             end 
         end 
 
@@ -125,6 +110,6 @@ function run_scenario_month(log_to_file=true, file_name="monthly1.txt", expansio
         print_bottleneck_stats(river_bottlenecks_all)
         println(top_power_dates)
     end 
-    @save "discharge_usage.jld2" discharge_usage
+
 end 
 run_scenario_month()
