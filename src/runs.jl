@@ -122,7 +122,7 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     println("\nSolve status: $status")
 
     printbasicresults(params, results2; run2args..., recalculate=false)
-    save_variables && savevariables(river, params, start_datetime, end_datetime, objective, "NonLinear", scenario, results2, solve_time(rivermodel2))
+    save_variables && savevariables(river, params, start_datetime, end_datetime, objective, "NonLinear", scenario, results2, solve_time(rivermodel2), file_name)
 
     return (results2, params, num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines) #status #rivermodel2, params, results2
 end
