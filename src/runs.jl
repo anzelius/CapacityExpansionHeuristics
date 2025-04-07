@@ -43,9 +43,36 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     
     @time params = read_inputdata(river, start_datetime, end_datetime, objective, model, scenario; silent)
     
-    if high_demand_trig
+    if high_demand_trig == "price_peak"
         @unpack spot_price = params
         spot_price[DateTime(high_demand_datetime)] = 100000
+    elseif high_demand_trig == "renewable"
+        @unpack spot_price = params
+        mean_val = mean(values(spot_price))
+
+        for k in keys(spot_price)
+            if spot_price[k] > mean_val
+                spot_price[k] *= 1.10  
+            elseif spot_price[k] < mean_val
+                spot_price[k] *= 0.90 
+            end
+        end
+
+        high_price = maximum(values(spot_price))
+        start_date = DateTime(high_demand_datetime)
+        end_date = start_date + Week(1) 
+
+        for k in keys(spot_price)
+            if start_date <= k < end_date
+                spot_price[k] = high_price
+            end
+        end
+    elseif high_demand_trig == "nuclear"
+        @unpack spot_price = params
+
+        for k in keys(spot_price)
+            spot_price[k] *= 0.90 
+        end
     end 
 
     @time results = buildmodel(params, start_datetime, end_datetime, end_start_constraints, objective; run1args...)
@@ -220,7 +247,7 @@ end
 
 function run_scenario(log_to_file=true, file_name="Bottlenecks 2020 percentile no peak", expansion_method="Bottlenecks", 
     percentile_method="Head times discharge", percentiles=10:10:100, start_date="2020-01-01T08", 
-    end_date="2020-12-31T08", high_demand=nothing)
+    end_date="2020-12-31T08", high_demand_method=nothing, high_demand_date=nothing)
 
     if expansion_method == "Bottlenecks"
         connections, river_bottlenecks_all = create_connection_graph(false)
@@ -244,12 +271,6 @@ function run_scenario(log_to_file=true, file_name="Bottlenecks 2020 percentile n
         plant_upgrades = head_x_discharge_based(river_bottlenecks_all, percentiles)
     end 
 
-    if !isnothing(high_demand)
-        high_demand_flag = true
-    else
-        high_demand_flag = false
-    end  
-
     num_new_turbines_percentile, num_turbine_upgrades_percentile, num_upgraded_plants_percentile, 
     discharge_upgrades_percentile, discharge_new_turbines_percentile, profit_percentile, 
     captured_price_percentile, top_power_percentile, power_production_percentile, 
@@ -264,7 +285,7 @@ function run_scenario(log_to_file=true, file_name="Bottlenecks 2020 percentile n
             river_bottlenecks = Dict(river => Dict(plant => value for (plant, value) in river_bottlenecks_all[river] if plant in plants_to_upgrade)) 
             
             model_results = run_model_river(river, start_date, end_date, "Profit", "Linear", "Dagens miljövillkor", 
-            save_variables=true, silent=true, high_demand_trig=high_demand_flag, high_demand_datetime=high_demand, 
+            save_variables=true, silent=true, high_demand_trig=high_demand_method, high_demand_datetime=high_demand_date, 
             end_start_constraints=true, reduce_bottlenecks=reduce_bottlenecks_flag, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
             bottleneck_values=river_bottlenecks, file_name="$file_name ($percentile)")  
 

@@ -395,7 +395,6 @@ function readresults(paths, obj, model, start_datetime, end_datetime)
             profit,                     # Float64
             power_turbines,             # OrderedCollections.OrderedDict{Tuple{DateTime, Symbol, Int64}, Float64}
             res_cont,                   # Matrix{Float64}
-            t_level,                    # Matrix{Float64}
             f_level,                    # Matrix{Float64}
             #hd,                        # Matrix{Float64}
             discharge,                  # OrderedCollections.OrderedDict{Tuple{DateTime, Symbol, Int64}, Float64}
@@ -412,9 +411,10 @@ function readresults(paths, obj, model, start_datetime, end_datetime)
             passage_downstream,         # Dict{Symbol, Array{Symbol}}
             drybed_downstream,          # Dict{Symbol, Array{Symbol}}
             utskov_downstream,          # Dict{Symbol, Array{Symbol}}
-            spot_price =                # Dict{Int64, Float64}
-                    load("$path/$filename", "profit", "power_production", "reservoir_content", "t_level", "f_level", "discharge", "passage_flow", "drybed_flow", "utskov_flow", "total_flow",
-                    "PLANT", "PPLANT", "TURBINE", "date_TIME", "downstream", "discharge_downstream", "passage_downstream", "drybed_downstream", "utskov_downstream", "spot_price")
+            spot_price,                 # Dict{Int64, Float64}
+            t_level =                   # Matrix{Float64}                
+                    load("$path/$filename", "profit", "power_production", "reservoir_content", "f_level", "discharge", "passage_flow", "drybed_flow", "utskov_flow", "total_flow",
+                    "PLANT", "PPLANT", "TURBINE", "date_TIME", "downstream", "discharge_downstream", "passage_downstream", "drybed_downstream", "utskov_downstream", "spot_price", "t_level")
 
             reservoir_content, tail_level, forebay_level, head = (Dict() for _ in 1:4)
 
@@ -476,3 +476,53 @@ function generate_hourly_datetimes(start_datetime::String, end_datetime::String)
 
     return [Dates.format(dt, "yyyy-mm-ddTHH") for dt in hourly_datetimes], [Dates.format(dt, "yyyy-mm-dd") for dt in xtick_dates], xtick_indexes
 end
+
+
+function read_results_all_rivers(filename_)
+    # filename_ = "Bottlenecks yearly 2016 no price peak 2016-01-01T08 to 2016-12-31T08 Profit Linear Dagens miljövillkor.jld2"
+    rundata = Dict()
+    for river in rivers 
+        path_ = "$river/scenarios/Dagens miljövillkor/results"
+        run = read_results_one_river(path_, filename_)
+        rundata[river] = run  
+    end 
+    return rundata 
+end 
+
+function read_results_one_river(path, filename)
+    profit,                     # Float64
+    power_turbines,             # OrderedCollections.OrderedDict{Tuple{DateTime, Symbol, Int64}, Float64}
+    res_cont,                   # Matrix{Float64}
+    f_level,                    # Matrix{Float64}
+    #hd,                        # Matrix{Float64}
+    discharge,                  # OrderedCollections.OrderedDict{Tuple{DateTime, Symbol, Int64}, Float64}
+    passage_flow,               # OrderedCollections.OrderedDict{Tuple{DateTime, Symbol, Symbol}, Float64}
+    drybed_flow,                # OrderedCollections.OrderedDict{Tuple{DateTime, Symbol, Symbol}, Float64}
+    utskov_flow,                # OrderedCollections.OrderedDict{Tuple{DateTime, Symbol, Symbol}, Float64}
+    total_flow,                 # OrderedCollections.OrderedDict{Tuple{DateTime, Symbol, Symbol}, Float64}
+    plantinfo,
+    turbineinfo,
+    PLANT,                      # Vector{Symbol}
+    PPLANT,                     # Vector{Symbol}
+    TURBINE,                    # Dict{Symbol, Vector{Int64}}
+    date_TIME,                  # Vector{DateTime}
+    downstream,                 # Dict{Symbol, Array{Symbol}}
+    discharge_downstream,       # Dict{Symbol, Symbol}
+    passage_downstream,         # Dict{Symbol, Array{Symbol}}
+    drybed_downstream,          # Dict{Symbol, Array{Symbol}}
+    utskov_downstream,          # Dict{Symbol, Array{Symbol}}
+    spot_price,                 # Dict{Int64, Float64}
+    tail_level =                   # Matrix{Float64}                
+            load("$path/$filename", "profit", "power_production", "reservoir_content", "f_level", "discharge", "passage_flow", "drybed_flow", "utskov_flow", "total_flow",
+            "plantinfo", "turbineinfo", "PLANT", "PPLANT", "TURBINE", "date_TIME", "downstream", "discharge_downstream", "passage_downstream", "drybed_downstream", "utskov_downstream", "spot_price", "t_level")
+
+    reservoir_content, tail_level, forebay_level, head = (Dict() for _ in 1:4)
+
+    [reservoir_content[t,p] = res_cont[a,b] for (a,t) in enumerate(date_TIME), (b,p) in enumerate(PLANT)]
+    [forebay_level[t,p] = f_level[a,b] for (a,t) in enumerate(date_TIME), (b,p) in enumerate(PLANT)]
+    #[tail_level[t,p] = t_level[a,b] for (a,t) in enumerate(date_TIME), (b,p) in enumerate(PPLANT)]
+    #[head[t,p] = hd[a,b] for (a,t) in enumerate(date_TIME), (b,p) in enumerate(PPLANT)]
+
+    return (; profit, power_turbines, reservoir_content, tail_level, forebay_level, discharge, passage_flow, drybed_flow, utskov_flow, total_flow,
+            plantinfo, turbineinfo, PLANT, PPLANT, TURBINE, date_TIME, downstream, discharge_downstream, passage_downstream, drybed_downstream, utskov_downstream, spot_price)    
+end 
