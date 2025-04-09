@@ -51,7 +51,7 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
         mean_val = mean(values(spot_price))
 
         for k in keys(spot_price)
-            if spot_price[k] > mean_val
+            if spot_price[k] >= mean_val
                 spot_price[k] *= 1.10  
             elseif spot_price[k] < mean_val
                 spot_price[k] *= 0.90 
@@ -187,10 +187,10 @@ function setsolver(model, objective, solver)
 end
 
 
-function run_all_rivers(file_name_save="Bottlenecks yearly 2020 no price peak")
-    connections, river_bottlenecks_all = create_connection_graph(false, "HHQ")  
+function run_all_rivers(file_name_save="No expansion yearly renewable 2016 no price peak")
+    #connections, river_bottlenecks_all = create_connection_graph(false, "HHQ")  
     # to run with flow values HHQ/MHQ, remove below func. Use args in create_connection_graph. 
-    river_bottlenecks_all = get_river_bottlenecks(connections, river_bottlenecks_all)
+    #river_bottlenecks_all = get_river_bottlenecks(connections, river_bottlenecks_all)
     failed_rivers = [] 
     total_max_power_production = []
     tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_discharge_upgrades, 
@@ -199,10 +199,10 @@ function run_all_rivers(file_name_save="Bottlenecks yearly 2020 no price peak")
     #tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_increased_discharge = 0, 0, 0, 0
 
     for river in rivers
-        model_results = run_model_river(river, "2020-01-01T08", "2020-12-31T08", "Profit", "NonLinear", "Dagens miljövillkor", 
-        save_variables=true, silent=true, high_demand_trig=false, high_demand_datetime="2019-01-02T15", 
-        end_start_constraints=true, reduce_bottlenecks=true, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
-        bottleneck_values=river_bottlenecks_all, file_name=file_name_save)  
+        model_results = run_model_river(river, "2016-01-01T08", "2016-12-31T08", "Profit", "Linear", "Dagens miljövillkor", 
+        save_variables=true, silent=true, high_demand_trig="renewable", high_demand_datetime="2016-02-07T08", 
+        end_start_constraints=true, reduce_bottlenecks=false, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
+        bottleneck_values=nothing, file_name=file_name_save)  
 
         if isnothing(model_results) 
             push!(failed_rivers, river) 
@@ -243,11 +243,11 @@ function run_all_rivers(file_name_save="Bottlenecks yearly 2020 no price peak")
     
     #print_bottleneck_stats(river_bottlenecks_all) 
 end 
-#run_all_rivers()
+run_all_rivers()
 
-function run_scenario(log_to_file=true, file_name="Bottlenecks 2020 percentile no peak", expansion_method="Bottlenecks", 
-    percentile_method="Head times discharge", percentiles=10:10:100, start_date="2020-01-01T08", 
-    end_date="2020-12-31T08", high_demand_method=nothing, high_demand_date=nothing)
+function run_scenario(log_to_file=true, file_name="Bottlenecks renewable 2016 percentile no peak", expansion_method="Bottlenecks", 
+    percentile_method="Head times discharge", percentiles=70:10:100, start_date="2016-01-01T08", 
+    end_date="2016-12-31T08", high_demand_method="renewable", high_demand_date="2016-02-07T08")
 
     if expansion_method == "Bottlenecks"
         connections, river_bottlenecks_all = create_connection_graph(false)
@@ -332,7 +332,7 @@ function run_scenario(log_to_file=true, file_name="Bottlenecks 2020 percentile n
     end 
     if log_to_file
         open(file_name, "a") do io
-            write(io, "$expansion_method, $percentile_method, $percentiles, $start_date, $end_date, $high_demand\n")
+            write(io, "$expansion_method, $percentile_method, $percentiles, $start_date, $end_date, $high_demand_method, $high_demand_date\n")
             write(io, "Failed for $(length(failed_rivers)) river: $failed_rivers\n")
             write(io, "#New turbines: $num_new_turbines_percentile\n")
             write(io, "#Turbine upgrades: $num_turbine_upgrades_percentile\n")
@@ -361,4 +361,4 @@ function run_scenario(log_to_file=true, file_name="Bottlenecks 2020 percentile n
     end 
 end 
 
-run_scenario()
+#run_scenario()

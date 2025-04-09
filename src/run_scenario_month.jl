@@ -35,7 +35,7 @@ function run_scenario_month(log_to_file=true, file_name="Bottlenecks monthly 201
         for river in rivers 
             #river_bottlenecks = Dict(river => Dict(plant => value for (plant, value) in river_bottlenecks_all[river] if plant in plants_to_upgrade)) 
             model_results = run_model_river(river, "$start_year-$start_month-01T08", "$end_year-$end_month-01T08", "Profit", "Linear", "Dagens miljövillkor", 
-            save_variables=false, silent=true, high_demand_trig=true, high_demand_datetime=high_demand_date, 
+            save_variables=false, silent=true, high_demand_trig="price_peak", high_demand_datetime=high_demand_date, 
             end_start_constraints=true, reduce_bottlenecks=reduce_bottlenecks_flag, reduce_bottlenecks_method="new_turbines_and_increase_discharge",
             bottleneck_values=river_bottlenecks_all, file_name="$file_name ($start_month)")  
 
