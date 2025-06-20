@@ -1,5 +1,6 @@
 #include("constants.jl")
 using StatsBase
+using DataStructures  
 
 
 function get_upgrades_iteration(all_plants, percentiles)
@@ -77,3 +78,32 @@ function head_x_discharge_based(river_bottlenecks_all, percentiles)
     return plant_upgrades_each_iteration 
 
 end 
+
+
+function head_x_discharge_river(river, river_bottlenecks, percentiles)
+    all_plants = Dict{Symbol, Float64}()
+    for plant in PLANTINFO[river]
+        if haskey(river_bottlenecks, plant.name)
+            discharge = river_bottlenecks[plant.name]
+            all_plants[plant.name] = plant.meanhead * discharge 
+        end 
+    end  
+    plant_upgrades_each_iteration = get_upgrades_iteration(all_plants, percentiles)
+    return plant_upgrades_each_iteration 
+
+end 
+
+
+function sort_by_head_x_discharge(river, plant_list)
+    # Compute sort weights using meanhead * discharge
+    weights = Dict{Symbol, Float64}()
+    for plant in PLANTINFO[river]
+        if haskey(plant_list, plant.name)
+            weights[plant.name] = plant.meanhead * plant_list[plant.name]
+        end
+    end
+
+    # Sort the keys in plant_list by computed weight
+    sorted_keys = sort(collect(keys(plant_list)), by = k -> weights[k], rev = true)
+    return OrderedDict(k => plant_list[k] for k in sorted_keys)
+end

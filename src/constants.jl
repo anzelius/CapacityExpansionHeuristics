@@ -1,5 +1,5 @@
 import Pkg
-Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
+Pkg.activate("C:/Users/TussAnzelius/.julia/environments/exjobb")
 using JuMP, Gurobi, Ipopt, AxisArrays, UnPack, FileIO, Statistics,
       StatsPlots, Plots.PlotMeasures, Dates, FilePathsBase, CategoricalArrays, DataFrames, XLSX, JLD2
 using Plots: plot, plot!
