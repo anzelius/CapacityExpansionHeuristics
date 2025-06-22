@@ -55,8 +55,8 @@ function high_price_week(params)
     end
     return params 
 end 
-
-function run_model_river(params, run1args, run2args, recalcargs, start, river::Symbol, start_datetime::String, end_datetime::String, 
+# params, run1args, run2args, recalcargs, start,  
+function run_model_river(river::Symbol, start_datetime::String, end_datetime::String, 
     objective::String, model::String, scenario::String; recalc::NamedTuple=(;), 
     save_variables=true, silent=true, high_demand_trig=false, high_demand_datetime="2016-01-15T08", 
     end_start_constraints=true, reduce_bottlenecks=false,
@@ -73,7 +73,9 @@ function run_model_river(params, run1args, run2args, recalcargs, start, river::S
     recalcargs = (type=:NLP, power="bilinear HeadE", e="ncv poly rampseg", recalc...)
 
     num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = increase_discharge_and_new_turbines(river, bottleneck_values) 
-   
+    @time params = read_inputdata(river, start_datetime, end_datetime, objective, model, scenario; silent)
+    #params = set_price_peak(params, high_demand_datetime)
+    
     @time results = buildmodel(params, start_datetime, end_datetime, end_start_constraints, objective; run1args...)
 
     rivermodel = results.rivermodel
@@ -247,9 +249,9 @@ function run_all_rivers(file_name_save="No expansion yearly 2019 no price peak")
 end 
 #run_all_rivers()
 
-function run_percentiles(log_to_file=true, file_name="TestBatch5.txt", 
+function run_percentiles(log_to_file=true, file_name="TestBatch2CorrInputTheoretical.txt", 
     expansion_method="LHQ", percentiles=10:10:100, start_date="2016-01-01T08", 
-    end_date="2016-12-31T08", high_demand_method=false, high_demand_date="2016-02-07T08")
+    end_date="2016-01-07T08", high_demand_method=false, high_demand_date="2016-02-07T08")
 
     #TODO: doublecheck markings 
     connections, river_bottlenecks_all = create_connection_graph(false)
@@ -273,8 +275,6 @@ function run_percentiles(log_to_file=true, file_name="TestBatch5.txt",
         end 
     end 
 
-
-
     num_new_turbines_percentile, num_turbine_upgrades_percentile, num_upgraded_plants_percentile, 
     discharge_upgrades_percentile, discharge_new_turbines_percentile, profit_percentile, 
     captured_price_percentile, top_power_percentile, power_production_percentile, 
@@ -295,7 +295,7 @@ function run_percentiles(log_to_file=true, file_name="TestBatch5.txt",
 
         river_bottlenecks = Dict()
 
-        params, run1args, run2args, recalcargs, start = read_input(river, start_date, end_date, "Profit", "Linear", "Dagens miljövillkor")
+        #params, run1args, run2args, recalcargs, start = read_input(river, start_date, end_date, "Profit", "Linear", "Dagens miljövillkor")
         
         n = length(plant_upgrades)
         batch_size = 5 
@@ -305,7 +305,8 @@ function run_percentiles(log_to_file=true, file_name="TestBatch5.txt",
             plants_to_upgrade = Dict(batch)
             river_bottlenecks[river] = plants_to_upgrade
             
-            model_results = run_model_river(params, run1args, run2args, recalcargs, start, river, start_date, end_date, "Profit", "Linear", "Dagens miljövillkor", 
+            # params, run1args, run2args, recalcargs, start,  
+            model_results = run_model_river(river, start_date, end_date, "Profit", "Linear", "Dagens miljövillkor", 
             save_variables=false, silent=true, high_demand_trig=high_demand_method, high_demand_datetime=high_demand_date, 
             end_start_constraints=true, reduce_bottlenecks=true,
             bottleneck_values=river_bottlenecks, file_name="$river $file_name ($percentile)")  
