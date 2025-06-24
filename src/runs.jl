@@ -287,22 +287,28 @@ function run_percentiles(log_to_file=true, file_name="TestBatch2CorrInputTheoret
 
         #TODO: better way of ordering and grouping
         plant_upgrades = sort_by_head_x_discharge(river, river_bottlenecks_all[river])
+
         temp1 = sort_by_head_x_discharge(river, top_plant_increases[river])
         temp2 = sort_by_head_x_discharge(river, river_bottlenecks_all2[river]) 
 
-        merge!(plant_upgrades, temp1) 
-        merge!(plant_upgrades, temp2)
+        plant_upgrades = vcat(collect(plant_upgrades), collect(temp1))
+        plant_upgrades = vcat(collect(plant_upgrades), collect(temp2))
+        #merge!(plant_upgrades, temp1) 
+        #merge!(plant_upgrades, temp2)
 
         river_bottlenecks = Dict()
 
         #params, run1args, run2args, recalcargs, start = read_input(river, start_date, end_date, "Profit", "Linear", "Dagens miljövillkor")
         
         n = length(plant_upgrades)
-        batch_size = 5 
+        batch_size = 2 
         entries = collect(plant_upgrades) 
         for i in 1:batch_size:n
-            batch = entries[i:min(i + batch_size - 1, n)]
-            plants_to_upgrade = Dict(batch)
+            batch = plant_upgrades[i:min(i + batch_size - 1, n)]
+            plants_to_upgrade = Dict{Symbol, Int}()
+            for (k, v) in batch
+                plants_to_upgrade[k] = get(plants_to_upgrade, k, 0) + v
+            end
             river_bottlenecks[river] = plants_to_upgrade
             
             # params, run1args, run2args, recalcargs, start,  
@@ -383,4 +389,4 @@ function run_percentiles(log_to_file=true, file_name="TestBatch2CorrInputTheoret
     end 
 end 
 
-run_percentiles()
+#run_percentiles()
