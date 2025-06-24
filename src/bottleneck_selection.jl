@@ -79,6 +79,21 @@ function head_x_discharge_based(river_bottlenecks_all, percentiles)
 
 end 
 
+function upstream_discharge_x_increased_discharge_based(river_bottlenecks_all, percentiles)
+    all_plants = Dict{Symbol, Float64}()
+    for river in rivers 
+        for plant in PLANTINFO[river]
+            if haskey(river_bottlenecks_all[river], plant.name)
+                discharge = river_bottlenecks_all[river][plant.name]
+                all_plants[plant.name] = (plant.discharge + discharge)*discharge  
+            end 
+        end 
+    end 
+    plant_upgrades_each_iteration = get_upgrades_iteration(all_plants, percentiles)
+    return plant_upgrades_each_iteration 
+
+end 
+
 
 function head_x_discharge_river(river, river_bottlenecks, percentiles)
     all_plants = Dict{Symbol, Float64}()
@@ -100,6 +115,20 @@ function sort_by_head_x_discharge(river, plant_list)
     for plant in PLANTINFO[river]
         if haskey(plant_list, plant.name)
             weights[plant.name] = plant.meanhead * plant_list[plant.name]
+        end
+    end
+
+    # Sort the keys in plant_list by computed weight
+    sorted_keys = sort(collect(keys(plant_list)), by = k -> weights[k], rev = true)
+    return OrderedDict(k => plant_list[k] for k in sorted_keys)
+end
+
+function sort_by_increased_discharge_x_upstream_discharge(river, plant_list)
+    # Compute sort weights using meanhead * discharge
+    weights = Dict{Symbol, Float64}()
+    for plant in PLANTINFO[river]
+        if haskey(plant_list, plant.name)
+            weights[plant.name] = (plant.discharge + plant_list[plant.name])*plant_list[plant.name]
         end
     end
 
