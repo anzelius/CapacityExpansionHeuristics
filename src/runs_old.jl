@@ -55,27 +55,27 @@ function run_scenario(log_to_file=true, file_name="Bottlenecks renewable 2016 pe
     temp1 = head_x_discharge_based(top_plant_increases, 10:10:100)
     temp2 = head_x_discharge_based(river_bottlenecks_all2, 10:10:100) 
     percentiles = collect(percentiles)
-    for (i, (k, v)) in enumerate(pairs(temp1))
-        plant_upgrades[i+100] = temp1[k] 
-        push!(percentiles, 100+i) 
-    end 
-
-    for (i, (k, v)) in enumerate(pairs(temp2))
-        plant_upgrades[i+110] = temp2[k] 
-        push!(percentiles, 110+i) 
-    end 
+    i=1 
+    plant_upgrades_all = Dict() 
+    for p_upg in [plant_upgrades, temp1, temp2]
+        for p in 10:10:100
+            plant_upgrades_all[i] = p_upg[p] 
+            i+=1
+        end 
+    end  
 
     num_new_turbines_percentile, num_turbine_upgrades_percentile, num_upgraded_plants_percentile, 
     discharge_upgrades_percentile, discharge_new_turbines_percentile, profit_percentile, 
     captured_price_percentile, top_power_percentile, power_production_percentile, 
     failed_rivers, top_power_dates = [], [], [], [], [], [], [], [], [], [], []   
 
-    for percentile in percentiles
-        plants_to_upgrade = plant_upgrades[percentile]
+    for percentile in 1:1:length(plant_upgrades_all)
+        plants_to_upgrade = plant_upgrades_all[percentile]
         tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_discharge_upgrades, 
         tot_discharge_new_turbines, tot_profit, tot_captured_price, tot_top_power,
         tot_power_production = 0, 0, 0, 0, 0, 0, 0, 0, 0
         for river in rivers 
+            println("==================== $river: $percentile / $(length(plant_upgrades_all)) ============================")
             river_bottlenecks = Dict(river => Dict(plant => value for (plant, value) in river_bottlenecks_all[river] if plant in plants_to_upgrade)) 
             
             model_results = run_model_river(river, start_date, end_date, "Profit", "Linear", "Dagens miljövillkor", 
@@ -156,6 +156,6 @@ function run_scenario(log_to_file=true, file_name="Bottlenecks renewable 2016 pe
 end 
 
 
-run_scenario(true, "Test old percentiles x2", "Bottlenecks", 
-    "Head times discharge", 6.66:6.66:100, "2016-01-01T08", 
+run_scenario(true, "CORR Test old percentiles x2", "Bottlenecks", 
+    "Head times discharge", 10:10:100, "2016-01-01T08", 
     "2016-12-31T08", false, "2010-02-07T08")
