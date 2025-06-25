@@ -63,12 +63,22 @@ function run_scenario(log_to_file=true, file_name="Bottlenecks renewable 2016 pe
             i+=1
         end 
     end  
+    i=1 
+    plant_upgrades_all = Dict() 
+    for p_upg in [plant_upgrades, temp1, temp2]
+        for p in 10:10:100
+            plant_upgrades_all[i] = p_upg[p] 
+            i+=1
+        end 
+    end  
 
     num_new_turbines_percentile, num_turbine_upgrades_percentile, num_upgraded_plants_percentile, 
     discharge_upgrades_percentile, discharge_new_turbines_percentile, profit_percentile, 
     captured_price_percentile, top_power_percentile, power_production_percentile, 
     failed_rivers, top_power_dates = [], [], [], [], [], [], [], [], [], [], []   
 
+    for percentile in 1:1:length(plant_upgrades_all)
+        plants_to_upgrade = plant_upgrades_all[percentile]
     for percentile in 1:1:length(plant_upgrades_all)
         plants_to_upgrade = plant_upgrades_all[percentile]
         tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_discharge_upgrades, 
