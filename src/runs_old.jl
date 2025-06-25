@@ -79,8 +79,6 @@ function run_scenario(log_to_file=true, file_name="Bottlenecks renewable 2016 pe
 
     for percentile in 1:1:length(plant_upgrades_all)
         plants_to_upgrade = plant_upgrades_all[percentile]
-    for percentile in 1:1:length(plant_upgrades_all)
-        plants_to_upgrade = plant_upgrades_all[percentile]
         tot_new_turbines, tot_turbine_upgrades, tot_upgraded_plants, tot_discharge_upgrades, 
         tot_discharge_new_turbines, tot_profit, tot_captured_price, tot_top_power,
         tot_power_production = 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -168,4 +166,4 @@ end
 
 run_scenario(true, "CORR Test old percentiles x2", "Bottlenecks", 
     "Head times discharge", 10:10:100, "2016-01-01T08", 
-    "2016-12-31T08", false, "2010-02-07T08")
+    "2016-12-31T08", false, "2010-02-07T08") 
