@@ -1,7 +1,7 @@
 import Pkg
-Pkg.activate("C:/Users/TussAnzelius/.julia/environments/exjobb")
+Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
 using JuMP, Gurobi, Ipopt, AxisArrays, UnPack, FileIO, Statistics,
-      StatsPlots, Plots.PlotMeasures, Dates, FilePathsBase, CategoricalArrays, DataFrames, XLSX, JLD2
+      StatsPlots, Plots.PlotMeasures, Dates, FilePathsBase, CategoricalArrays, DataFrames, XLSX, JLD2, OrderedCollections
 using Plots: plot, plot!
 
 
@@ -51,7 +51,7 @@ AxisArrays.AxisArray(f::Float64, axes...) = AxisArray(fill(f, length.(axes)), ax
 macro aa(e)
     esc(:(AxisArray($e...)))
 end
-
+#=
 const DATAFOLDER = let
     env_path = get(ENV, "FORSA_DATA_PATH", nothing)
     if env_path !== nothing
@@ -60,7 +60,8 @@ const DATAFOLDER = let
         parent(Path(@__DIR__))
     end
 end
-
+=#
+DATAFOLDER = "c:/Users/tussa/Desktop/FORSA-Exjobb"
 ## Global variables
 PLANTINFO = Dict{Symbol, Vector{Plant}}()
 TURBINEINFO = Dict{Symbol, Vector{Turbine}}()
@@ -116,6 +117,8 @@ struct ConnectionsGraph
 end 
 
 global NUM_REAL_PLANTS = 0 
+global MEAN_HEADS = Dict{}()
+global PLANT_DISCHARGES = Dict{}()
 ORG_TURBINE = Dict{}()
 ORG_TURBINEINFO = Dict{}()
 global ORG_MAX_DISCHARGE = Dict{}()
@@ -128,13 +131,16 @@ for river in rivers
     PLANT = [p.name for p in plants[1:end-1]]
     realplants = [plantinfo[p].nr_turbines != 0 for p in PLANT]
     PPLANT = PLANT[realplants]
+    global MEAN_HEADS[river] = Dict(plant.name => plant.meanhead for plant in plants)
     TURBINE = Dict(plantinfo[p].nr_turbines > 0 ? p => collect(1:plantinfo[p].nr_turbines) : p => Int[] for p in PLANT)
     ORG_TURBINE[river] = deepcopy(TURBINE)
     ORG_TURBINEINFO[river] = deepcopy(turbines)
     global NUM_REAL_PLANTS += length(PPLANT)
     river_max_discharge = Dict{}()
+    PLANT_DISCHARGES[river] = Dict{}()
     for p in PPLANT
         max_d = sum(turbineinfo[p,j].maxdischarge for j in TURBINE[p])
+        global PLANT_DISCHARGES[river][p] = max_d 
         river_max_discharge[p] = max_d 
     end
     global ORG_MAX_DISCHARGE[river] = river_max_discharge
