@@ -35,6 +35,7 @@ function initialize_run(river::Symbol, start_datetime::String, end_datetime::Str
     recalc::NamedTuple=(;), save_variables=true, silent=true,
     )
 
+    plants_to_expand = Dict()
     if river == :All
         _, plants_to_expand = identify_expansions_all_rivers(expansion_strategy) 
     elseif river in rivers

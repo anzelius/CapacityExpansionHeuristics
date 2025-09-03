@@ -1,5 +1,5 @@
 import Pkg
-Pkg.activate("C:/Users/tussa/.julia/environments/exjobb")
+Pkg.activate("C:/Users/TussAnzelius/.julia/environments/exjobb")
 using JuMP, Gurobi, Ipopt, AxisArrays, UnPack, FileIO, Statistics,
       StatsPlots, Plots.PlotMeasures, Dates, FilePathsBase, CategoricalArrays, DataFrames, XLSX, JLD2, OrderedCollections
 using Plots: plot, plot!
@@ -51,17 +51,16 @@ AxisArrays.AxisArray(f::Float64, axes...) = AxisArray(fill(f, length.(axes)), ax
 macro aa(e)
     esc(:(AxisArray($e...)))
 end
-#=
-const DATAFOLDER = let
+
+DATAFOLDER = begin
     env_path = get(ENV, "FORSA_DATA_PATH", nothing)
     if env_path !== nothing
         Path(env_path)
     else
-        parent(Path(@__DIR__))
+        parent(parent(Path(@__DIR__)))
     end
 end
-=#
-DATAFOLDER = "c:/Users/tussa/Desktop/FORSA-Exjobb"
+#DATAFOLDER = "c:/Users/tussa/Desktop/FORSA-Exjobb"
 ## Global variables
 PLANTINFO = Dict{Symbol, Vector{Plant}}()
 TURBINEINFO = Dict{Symbol, Vector{Turbine}}()

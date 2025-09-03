@@ -1,17 +1,15 @@
 include("connection_graph.jl")
-
+include("strategies/bottlenecks.jl")
 
 
 function identify_expansions_one_river(river::Symbol, expansion_strategy::String)
-    all_expansions = Dict{Symbol, Vector{Dict{Symbol, Int32}}}() # river: [plant : missing discharge] 
-    connection_graphs = Dict{Symbol, ConnectionsGraph}()  # river : connection graph 
+    #all_expansions = Dict{Symbol, Vector{Dict{Symbol, Int32}}}() # river: [plant : missing discharge] 
+    #connection_graphs = Dict{Symbol, ConnectionsGraph}()  # river : connection graph 
 
     connection_graph = get_connection_graph(river) 
-    expansions = identify_expansions(connection_graph, expansion_strategy)
-    all_expansions[river] = expansions 
-    connection_graphs[river] = connection_graph
+    expansions = identify_expansions(connection_graph[river], expansion_strategy)
 
-    return connection_graph, all_expansions 
+    return connection_graph, expansions 
 end 
 
 
@@ -36,7 +34,7 @@ const STRATEGY_COMBOS = Dict(
     "Match flow Bottlenecks" => ["Match flow", "Bottlenecks"]
 )
 
-function identify_expansions(connection_graph::Dict{Symbol, ConnectionsGraph}, expansion_strategy::String)
+function identify_expansions(connection_graph::ConnectionsGraph, expansion_strategy::String)
     expansions = Vector{Dict{Symbol, Int32}}()
 
     expansion_methods = STRATEGY_COMBOS[expansion_strategy]

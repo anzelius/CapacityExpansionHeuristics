@@ -2,10 +2,12 @@
 # TODO: rewrite aLL 
 
 function create_new_node(plant_name)
-    real_plant = PLANTINFO[river][plant_name].nr_turbines != 0
+    real_plant = PLANTINFO[river][findfirst(p -> p.name == plant_name, PLANTINFO[river])].nr_turbines != 0
     max_discharge = 0 
     if real_plant
-        tot_turbine_discharge = sum(TURBINEINFO[river][plant_name,j].maxdischarge for j in TURBINES[river][plant_name])
+        turbines_indices = findall(p -> p.name_nr[1] == plant_name, TURBINEINFO[river])
+        turbines = TURBINEINFO[river][turbines_indices]
+        tot_turbine_discharge = sum([turbine.maxdischarge for turbine in turbines])
         max_discharge = tot_turbine_discharge      
     end 
     return Node(plant_name, max_discharge, [], [], real_plant)
