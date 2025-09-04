@@ -51,6 +51,7 @@ To run the main simulation or analysis:
 
 ```julia
 include("main.jl")
+```
 
 ---
 
