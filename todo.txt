@@ -1,4 +1,5 @@
 Must:
+* Clean up code 
 * Doublecheck functionality of all implemented options 
 * Save results to CSV file + print results 
 * Flow diagram of design 

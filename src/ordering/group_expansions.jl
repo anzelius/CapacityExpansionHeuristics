@@ -44,7 +44,7 @@ function get_steps(ordered_expansions::OrderedDict{Symbol, Int32}, step_size)
     steps = [] 
     n = length(ordered_expansions)
     plant_list = collect(keys(ordered_expansions))
-    ordered_expansions[]
+ 
     for i in 1:step_size:n
         chunk = Dict()
         for j in i:min(i+step_size-1, n)
@@ -53,6 +53,8 @@ function get_steps(ordered_expansions::OrderedDict{Symbol, Int32}, step_size)
         end
         push!(steps, chunk)
     end
+
+    return steps
 end 
 
 function group_handler(ordered::Dict{Symbol, Vector{OrderedDict{Symbol, Int32}}}, order_grouping::Symbol, settings::NamedTuple)

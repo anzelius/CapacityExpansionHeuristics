@@ -8,7 +8,7 @@ include("runners/run_model.jl")
 ###################################
 # Parameters 
 ###################################
-river = :Skellefteälven  # [:All, :Dalälven, :Götaälv, :Indalsälven, :Ljungan, :Ljusnan, :Luleälven, :Skellefteälven, :Umeälven, :Ångermanälven]
+river = :All  # [:All, :Dalälven, :Götaälv, :Indalsälven, :Ljungan, :Ljusnan, :Luleälven, :Skellefteälven, :Umeälven, :Ångermanälven]
 start_datetime = "2016-01-01T08" 
 end_datetime = "2016-01-30T08"  
 objective = "Profit"
@@ -18,8 +18,8 @@ environmental_constraints_scenario = "Dagens miljövillkor"  # ['Dagens miljövi
 expansion_strategy = "Match flow"  # ['None', 'Bottlenecks', 'Match flow', 'New bottlenecks', 'Match flow bottlenecks'] 
 order_metric = :dDxuD  # [:HxD, :dDxuD, (:TopFirst)]
 strict_order = true 
-order_grouping = :percentile  # [:percentile, :step] 
-order_basis = :river  # [:river, :aggregated]  
+order_grouping = :step  # [:percentile, :step] 
+order_basis = :aggregated  # [:river, :aggregated]  
 settings = (percentile = 10:10:100, step_size = 10, flow_match="MHQ", flow_scale=0.75, top_plant_scale=1.5, price_factor=0.8, peak_date="2016-01-02T08")
 
 theoretical = false 
@@ -56,7 +56,6 @@ function initialize_run(river::Symbol, start_datetime::String, end_datetime::Str
     results = run_model(river, order_of_expansion, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, 
     price_profile_scenario, theoretical, settings, save_file_name, recalc, save_variables, silent)  
 
-    println(results)
     # TODO: saving and printing results 
     # save results to csv file 
     # print basic aggregated results 

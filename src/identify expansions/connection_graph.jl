@@ -1,7 +1,6 @@
 
-# TODO: rewrite aLL 
 
-function create_new_node(plant_name)
+function create_new_node(river::Symbol, plant_name::Symbol)
     real_plant = PLANTINFO[river][findfirst(p -> p.name == plant_name, PLANTINFO[river])].nr_turbines != 0
     max_discharge = 0 
     if real_plant
@@ -21,13 +20,13 @@ function get_connection_graph(river::Symbol)
     for connection in NETWORK[river]
         plant_name = connection.name 
         node1 = get!(temp_dict_nodes, plant_name) do
-            create_new_node(plant_name)
+            create_new_node(river, plant_name)
         end
 
         for upstream in connection.upstream 
             upstream_name = upstream.name 
             node2 = get!(temp_dict_nodes, upstream_name) do
-                create_new_node(upstream_name)
+                create_new_node(river, upstream_name)
             end
             push!(node1.upstream, node2.name) # if node1 has node2 as upstream, node2 has node1 as downstream
             push!(node2.downstream, node1.name) 

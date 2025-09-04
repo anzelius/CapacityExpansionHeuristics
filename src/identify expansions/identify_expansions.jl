@@ -21,11 +21,11 @@ function identify_expansions_all_rivers(expansion_strategy::String, settings::Na
 
     for river in rivers 
         connection_graph, expansions = identify_expansions_one_river(river, expansion_strategy, settings)
-        all_expansions[river] = expansions[river] 
+        all_expansions[river] = expansions
         connection_graphs[river] = connection_graph[river] 
     end 
 
-    return connection_graph, all_expansions
+    return connection_graphs, all_expansions
 end 
 
 # TODO: move to constant fiel 

@@ -22,6 +22,10 @@ function match_flow(river::Symbol, connections::ConnectionsGraph, flow_match, fl
     visited = Set()
 
     function match_capacity_flow(current_plant::Node)
+        if !current_plant.is_real_plant
+            return 
+        end
+
         if haskey(flow_values, current_plant.name)
             if flow_values[current_plant.name] > current_plant.discharge
                 expansions[current_plant.name] = flow_values[current_plant.name] - current_plant.discharge
@@ -31,8 +35,6 @@ function match_flow(river::Symbol, connections::ConnectionsGraph, flow_match, fl
 
     function dfs(current_plant::Node)
         if isempty(current_plant.upstream) 
-            match_capacity_flow(current_plant)
-            push!(visited, current_plant.name)
             return
         end 
 
