@@ -5,9 +5,9 @@ include("../output/output.jl")
 
 
 function run_model(river, order_of_expansion, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, 
-    price_profile_scenario, theoretical, save_file_name, recalc, save_variables, silent)
+    price_profile_scenario, theoretical, settings, save_file_name, recalc, save_variables, silent)
     
-    perform_expansions = isempty(order_of_expansion) ? false : true 
+    perform_expansions = isempty(order_of_expansion) ? (push!(order_of_expansion, Dict()); false) : true
     chosen_rivers = river == :All ? rivers : [river] 
     # can run all rivers, (todo) chosen list of rivers, one river 
 
@@ -36,8 +36,6 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     end_start_constraints=true, perform_expansions=false,
     expansions, file_name) 
 
-    
-
     type=modelversions[model].main.type
     power=modelversions[model].main.power
     e=modelversions[model].main.e
@@ -48,10 +46,24 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     run1args = isempty(start) ? run2args : (type=start.type, power=start.power, e=start.e)
     recalcargs = (type=:NLP, power="bilinear HeadE", e="ncv poly rampseg", recalc...)
 
-    num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = increase_discharge_and_new_turbines(river, expansions) 
-    
+    if perform_expansions
+        num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = increase_discharge_and_new_turbines(river, expansions) 
+    end 
+
     @time params = read_inputdata(river, start_datetime, end_datetime, objective, model, scenario; silent)
-    #params = set_price_peak(params, high_demand_datetime)
+    
+    if price_profile_scenario != :none 
+        @unpack spot_price = params
+        mean_val = mean(values(spot_price))
+        if price_profile_scenario == :volatility 
+            scaling_factor = settings.price_factor
+            for k in keys(spot_price)
+                spot_price[k] = mean_val + scaling_factor*(spot_price[k]-mean_val)
+            end
+        elseif price_profile_scenario == :peak
+            spot_price[settings.peak_date] = 100000
+        end
+    end 
     
     @time results = buildmodel(params, start_datetime, end_datetime, end_start_constraints, objective; run1args...)
 

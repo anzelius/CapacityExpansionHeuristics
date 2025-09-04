@@ -1,0 +1,13 @@
+Must:
+* Doublecheck functionality of all implemented options 
+* Save results to CSV file + print results 
+* Flow diagram of design 
+* Readme 
+
+
+
+Functional growth:
+* Add expansion options (new turbines, only upgrades, etc) 
+* topFirst ordering
+* dunkelflaute + extended period price profile 
+* input list of rivers 

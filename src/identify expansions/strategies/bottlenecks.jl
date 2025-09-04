@@ -79,6 +79,8 @@ river_bottlenecks = Dict{Symbol, Int64}()  # river : [Dict(bottleneck plant : mi
                 end 
                 if plant_discharge < max_discharge_along_river 
                     river_bottlenecks[current_plant.name] = get!(river_bottlenecks, current_plant.name, 0) + (max_discharge_along_river - plant_discharge)
+                    current_plant.discharge = river_bottlenecks[current_plant.name] # addition to keep connections with all performed expansions
+                    # TODO: verify that connections is updated 
                 end 
             else 
                 max_discharge_along_river = plant_discharge

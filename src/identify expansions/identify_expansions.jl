@@ -1,24 +1,26 @@
 include("connection_graph.jl")
 include("strategies/bottlenecks.jl")
+include("strategies/match_flow.jl")
+include("strategies/top_plants.jl")
 
 
-function identify_expansions_one_river(river::Symbol, expansion_strategy::String)
+function identify_expansions_one_river(river::Symbol, expansion_strategy::String, settings::NamedTuple)
     #all_expansions = Dict{Symbol, Vector{Dict{Symbol, Int32}}}() # river: [plant : missing discharge] 
     #connection_graphs = Dict{Symbol, ConnectionsGraph}()  # river : connection graph 
 
     connection_graph = get_connection_graph(river) 
-    expansions = identify_expansions(connection_graph[river], expansion_strategy)
+    expansions = identify_expansions(river, connection_graph[river], expansion_strategy, settings)
 
     return connection_graph, expansions 
 end 
 
 
-function identify_expansions_all_rivers(expansion_strategy::String)
+function identify_expansions_all_rivers(expansion_strategy::String, settings::NamedTuple)
     all_expansions = Dict{Symbol, Vector{Dict{Symbol, Int32}}}()
     connection_graphs = Dict{Symbol, ConnectionsGraph}()
 
     for river in rivers 
-        connection_graph, expansions = identify_expansions_one_river(river, expansion_strategy)
+        connection_graph, expansions = identify_expansions_one_river(river, expansion_strategy, settings)
         all_expansions[river] = expansions[river] 
         connection_graphs[river] = connection_graph[river] 
     end 
@@ -34,19 +36,19 @@ const STRATEGY_COMBOS = Dict(
     "Match flow Bottlenecks" => ["Match flow", "Bottlenecks"]
 )
 
-function identify_expansions(connection_graph::ConnectionsGraph, expansion_strategy::String)
+function identify_expansions(river::Symbol, connection_graph::ConnectionsGraph, expansion_strategy::String, settings::NamedTuple)
     expansions = Vector{Dict{Symbol, Int32}}()
 
     expansion_methods = STRATEGY_COMBOS[expansion_strategy]
-
+ 
     for expansion_method in expansion_methods
         expansion = Dict{Symbol, Int32}()
         if expansion_method == "Bottlenecks"
             expansion = reduce_bottlenecks(connection_graph)
         elseif expansion_method == "Match flow" 
-            expansion = match_flow(connection_graph, params)  
+            expansion = match_flow(river, connection_graph, settings.flow_match, settings.flow_scale)  
         elseif expansion_method == "Top plants"
-            expansion = increase_top_plants(connection_graph, params)  
+            expansion = increase_top_plants(connection_graph, settings.top_plant_scale)  
         else
             error("Invalid expansion strategy")
             return 

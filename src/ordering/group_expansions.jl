@@ -55,17 +55,16 @@ function get_steps(ordered_expansions::OrderedDict{Symbol, Int32}, step_size)
     end
 end 
 
-function group_handler(ordered::Dict{Symbol, Vector{OrderedDict{Symbol, Int32}}}, order_grouping::Symbol)
+function group_handler(ordered::Dict{Symbol, Vector{OrderedDict{Symbol, Int32}}}, order_grouping::Symbol, settings::NamedTuple)
     expansion_steps = Vector{Dict{Symbol, Int32}}()
-    percentile = 10:10:100
 
     for (river, ordered_expansions) in ordered
         for ordered_expansion in ordered_expansions
             if order_grouping == :percentile
-                percentiles = get_percentiles(ordered_expansion, percentile) # percentiles need to be in the form of Dict(), Dict() ... 
+                percentiles = get_percentiles(ordered_expansion, settings.percentile) # percentiles need to be in the form of Dict(), Dict() ... 
                 append!(expansion_steps, percentiles)
             elseif order_grouping == :step 
-                steps = get_steps(ordered_expansion, step_size)  # steps need to be in the form of Dict(), Dict() ... Dict containing all plants to upgrade for that step  
+                steps = get_steps(ordered_expansion, settings.step_size)  # steps need to be in the form of Dict(), Dict() ... Dict containing all plants to upgrade for that step  
                 append!(expansion_steps, steps) 
             else 
                 @error("Invalid grouping setting")

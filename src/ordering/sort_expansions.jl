@@ -43,19 +43,19 @@ end
 function sort_handler(plants_to_expand::Dict{Symbol, Vector{Dict{Symbol, Int32}}}, order_metric::Symbol)
     sorted_list = Dict{Symbol, Vector{OrderedDict{Symbol, Int32}}}() 
     for (river, expansion_lists) in plants_to_expand
-        for expansion_list in expansion_lists
+        #for expansion_list in expansion_lists
             sorted_expansions = Vector{OrderedDict{Symbol, Int32}}()
             if order_metric == :HxD
                 sorted_expansions = sort_based_on_head_x_discharge(river, expansion_lists)
             elseif order_metric == :dDxuD
-                sorted_expansions = sort_based_biggest_bottleneck_first(river, expansion_list)
+                sorted_expansions = sort_based_biggest_bottleneck_first(river, expansion_lists)
             elseif order_metric == :TopFirst
-                sorted_expansions = sort_based_top_plants_first(river, expansion_list)
+                sorted_expansions = sort_based_top_plants_first(river, expansion_lists)
             else
-                error("Invalid order metric")
+                error("Invalid order metric")  
             end 
             sorted_list[river] = sorted_expansions 
-        end 
+        #end 
     end 
     
     # return a dict mapping river to vector with an ordered dict 
