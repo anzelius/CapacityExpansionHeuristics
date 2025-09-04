@@ -1,25 +1,32 @@
+include("../add capacity/add_turbines.jl")
+include("../model/input.jl")
+include("../model/opt_model.jl")
+include("../output/output.jl") 
 
-function run_model(order_of_expansion, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, 
+
+function run_model(river, order_of_expansion, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, 
     price_profile_scenario, theoretical, save_file_name, recalc, save_variables, silent)
     
-    perform_expansions = !empty!(order_of_expansion) ? true : false 
+    perform_expansions = isempty(order_of_expansion) ? false : true 
+    chosen_rivers = river == :All ? rivers : [river] 
+    # can run all rivers, (todo) chosen list of rivers, one river 
 
+    results_all = Dict()
+    for (step, plants_to_upgrade) in enumerate(order_of_expansion) # List av dicts for each expansion step, lists containing dict of plants to upgrade and by how much 
+        results_expansion_step = Dict()
+        for r in chosen_rivers
+            expansions = Dict(r => Dict(plant => value for (plant, value) in plants_to_upgrade if haskey(PLANT_DISCHARGES[r], plant))) 
 
-    for expansions in order_of_expansion
-        for river in rivers
-            expansions = Dict() 
-
-            if empty(expansions)
-                continue
-            end 
-
-            results = run_model_river(river, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, save_variables=save_variables, 
+            results = run_model_river(r, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, save_variables=save_variables, 
             end_start_constraints=theoretical, price_profile_scenario=price_profile_scenario, silent=silent, perform_expansions=perform_expansions,
             expansions=expansions, file_name=save_file_name, recalc=recalc) 
+            
+            results_expansion_step[r] = results
         end
+        results_all[step] = results_expansion_step
     end
-    # do something , return results 
-    return results 
+    
+    return results_all 
 end 
 
 
@@ -41,7 +48,7 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     run1args = isempty(start) ? run2args : (type=start.type, power=start.power, e=start.e)
     recalcargs = (type=:NLP, power="bilinear HeadE", e="ncv poly rampseg", recalc...)
 
-    num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = increase_discharge_and_new_turbines(river, bottleneck_values) 
+    num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = increase_discharge_and_new_turbines(river, expansions) 
     
     @time params = read_inputdata(river, start_datetime, end_datetime, objective, model, scenario; silent)
     #params = set_price_peak(params, high_demand_datetime)
@@ -96,4 +103,63 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     save_variables && savevariables(river, params, start_datetime, end_datetime, objective, "NonLinear", scenario, results2, solve_time(rivermodel2), file_name)
 
     return (results2, params, num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines) #status #rivermodel2, params, results2
+end
+
+
+function setsolver(model, objective, solver)
+    nthreads = max(4, Sys.CPU_THREADS - 2)
+    if solver == :gurobi
+        if objective == "Profit"
+            optimizer = optimizer_with_attributes(Gurobi.Optimizer,
+                "Threads" => nthreads,
+                "Method" => 2,
+                "Presolve" => 2,
+                "PreSparsify" => 1,
+                "Cuts" => 2,
+                "nonconvex" => 0,
+                "crossover" => 0,
+                "MIPGap" => 5e-6,
+                "DisplayInterval" => 1,
+                "BarIterLimit" => 1e6)
+            set_optimizer(model, optimizer)
+
+        elseif objective == "Load"
+            #= optimizer = optimizer_with_attributes(Gurobi.Optimizer,
+                "Threads" => nthreads,
+                "Method" => 2,
+                "Presolve" => 2,
+                "PreSparsify" => 1,
+                "Cuts" => 2,
+                "nonconvex" => 0,
+                "crossover" => 0,
+                "MIPGap" => 5e-6,
+                "DisplayInterval" => 1,
+                "BarIterLimit" => 1e6,
+                "BarHomogeneous" => 1) =#
+
+                optimizer = optimizer_with_attributes(Gurobi.Optimizer,
+                "Threads" => nthreads,
+                "FeasibilityTol" => 1e-8,           # 1e-6 if needed
+                "OptimalityTol" => 1e-8,            # 1e-6 if needed
+                "BarConvTol" => 1e-9,               # 1e-7 if needed
+                "BarHomogeneous" => 1,     # 0 or 1         # 1: enabled
+                "Crossover" => 0,                  # 0: disabled
+                "Method" => 2,                     # -1: auto, 1: dual simplex, 2: barrier
+                "Presolve" => 2,           # 1 or 2      # 2: aggressive
+                "NumericFocus" => 1, # only increase to 2 or 3 if absolutely necessary
+                "Aggregate" => 2,           # 1 or 2
+                "ScaleFlag" => 3,           # 2 or 3
+                )
+            set_optimizer(model, optimizer)
+        end
+
+    elseif solver == :ipopt
+        optimizer = optimizer_with_attributes(Ipopt.Optimizer, "max_iter" => 100000, "mu_strategy" => "adaptive")
+
+        set_optimizer(model, optimizer)
+        set_optimizer_attributes(model, "warm_start_init_point" => "yes", "warm_start_bound_push" => 1e-9, "warm_start_bound_frac" => 1e-9,
+                "warm_start_slack_bound_frac" => 1e-9, "warm_start_slack_bound_push" => 1e-9, "warm_start_mult_bound_push" => 1e-9)
+    else
+        @error "No solver named $solver."
+    end
 end

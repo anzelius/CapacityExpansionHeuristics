@@ -34,8 +34,8 @@ function get_percentiles(ordered_expansions::OrderedDict{Symbol, Int32}, percent
     percentiles = [] 
     for p in percentile_levels
         threshold = percentile(values(ordered_expansions), 100 - p)  
-        percentile = Dict(plant => increase_discharge for (plant, increase_discharge) in ordered_expansions if increase_discharge >= threhsold)
-        push!(percentiles, percentile)
+        plants_in_percentile = Dict(plant => increase_discharge for (plant, increase_discharge) in ordered_expansions if increase_discharge >= threshold)
+        push!(percentiles, plants_in_percentile)
     end
     return percentiles 
 end 
@@ -57,18 +57,21 @@ end
 
 function group_handler(ordered::Dict{Symbol, Vector{OrderedDict{Symbol, Int32}}}, order_grouping::Symbol)
     expansion_steps = Vector{Dict{Symbol, Int32}}()
+    percentile = 10:10:100
 
     for (river, ordered_expansions) in ordered
-        if order_grouping == :percentile
-            percentiles = get_percentiles(ordered_expansions, percentile) # percentiles need to be in the form of Dict(), Dict() ... 
-            append!(expansion_steps, percentiles)
-        elseif order_grouping == :steps 
-            steps = get_steps(ordered_expansions, step_size)  # steps need to be in the form of Dict(), Dict() ... Dict containing all plants to upgrade for that step  
-            append!(expansion_steps, steps) 
-        else 
-            @error("Invalid grouping setting")
-        end  
+        for ordered_expansion in ordered_expansions
+            if order_grouping == :percentile
+                percentiles = get_percentiles(ordered_expansion, percentile) # percentiles need to be in the form of Dict(), Dict() ... 
+                append!(expansion_steps, percentiles)
+            elseif order_grouping == :step 
+                steps = get_steps(ordered_expansion, step_size)  # steps need to be in the form of Dict(), Dict() ... Dict containing all plants to upgrade for that step  
+                append!(expansion_steps, steps) 
+            else 
+                @error("Invalid grouping setting")
+            end  
+        end 
     end 
     
-    return expansions_steps 
+    return expansion_steps 
 end 

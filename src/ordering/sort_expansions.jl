@@ -2,13 +2,13 @@ using StatsBase
 using DataStructures  
 
 
-function sort_based_on_head_x_discharge(expansion_lists::Vector{Dict{Symbol, Int32}})
+function sort_based_on_head_x_discharge(river::Symbol, expansion_lists::Vector{Dict{Symbol, Int32}})
     sorted_list = Vector{OrderedDict{Symbol, Int32}}()
 
     for expansion_dict in expansion_lists
         weights = Dict{Symbol, Float64}() 
         for (plant, discharge_increase) in expansion_dict
-            weights[plant] = MEAN_HEADS[plant] * discharge_increase
+            weights[plant] = MEAN_HEADS[river][plant] * discharge_increase
         end
 
         sorted_plants = sort(collect(weights), by = x -> x[2])
@@ -19,13 +19,13 @@ function sort_based_on_head_x_discharge(expansion_lists::Vector{Dict{Symbol, Int
     return sorted_list
 end 
     
-function sort_based_biggest_bottleneck_first(expansion_lists::Vector{Dict{Symbol, Int32}})
+function sort_based_biggest_bottleneck_first(river::Symbol, expansion_lists::Vector{Dict{Symbol, Int32}})
     sorted_list = Vector{OrderedDict{Symbol, Int32}}()
 
     for expansion_dict in expansion_lists
         weights = Dict{Symbol, Float64}() 
         for (plant, discharge_increase) in expansion_dict
-            weights[plant] = (PLANT_DISCHARGES[plant] + discharge_increase)*discharge_increase
+            weights[plant] = (PLANT_DISCHARGES[river][plant] + discharge_increase)*discharge_increase
         end
 
         sorted_plants = sort(collect(weights), by = x -> x[2])
@@ -37,20 +37,20 @@ function sort_based_biggest_bottleneck_first(expansion_lists::Vector{Dict{Symbol
 
 end 
     
-function sort_based_top_plants_first(expansion_lists::Vector{Dict{Symbol, Int32}})
+function sort_based_top_plants_first(river::Symbol, expansion_lists::Vector{Dict{Symbol, Int32}})
 end 
 
 function sort_handler(plants_to_expand::Dict{Symbol, Vector{Dict{Symbol, Int32}}}, order_metric::Symbol)
     sorted_list = Dict{Symbol, Vector{OrderedDict{Symbol, Int32}}}() 
     for (river, expansion_lists) in plants_to_expand
         for expansion_list in expansion_lists
-            sorted = Vector{OrderedDict{Symbol, Int32}}()
-            if order_metric == "HxD"
-                sorted = sort_based_on_head_x_discharge(expansion_list)
-            elseif order_metric == "dDxuD"
-                sorted = sort_based_biggest_bottleneck_first(expansion_list)
-            elseif order_metric == "TopFirst"
-                sorted = sort_based_top_plants_first(expansion_list)
+            sorted_expansions = Vector{OrderedDict{Symbol, Int32}}()
+            if order_metric == :HxD
+                sorted_expansions = sort_based_on_head_x_discharge(river, expansion_lists)
+            elseif order_metric == :dDxuD
+                sorted_expansions = sort_based_biggest_bottleneck_first(river, expansion_list)
+            elseif order_metric == :TopFirst
+                sorted_expansions = sort_based_top_plants_first(river, expansion_list)
             else
                 error("Invalid order metric")
             end 

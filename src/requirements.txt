@@ -1,2 +1,2 @@
-AxisArrays@v0.4.7, CategoricalArrays@v0.10.8, Colors@v0.13.0, DataFrames@v1.7.0, FileIO@v1.16.6, FilePathsBase@v0.9.22, Ipopt@v1.7.0, JLD2@v0.5.10, JuMP@v1.23.5, PlotlyJS@v0.18.15, Plots@v1.40.9, Polynomials@v4.0.12, PyCall@v1.96.4, StatsBase@v0.34.3, StatsPlots@v0.15.7, UnPack@v1.0.2, XLSX@v0.10.4, Statistics@v1.11.1, Gurobi@v1.4.0, Kaleido_jll@v0.1, OrderedCollections
+AxisArrays@v0.4.7, CategoricalArrays@v0.10.8, Colors@v0.13.0, DataFrames@v1.7.0, FileIO@v1.16.6, FilePathsBase@v0.9.22, Ipopt@v1.7.0, JLD2@v0.5.10, JuMP@v1.23.5, PlotlyJS@v0.18.15, Plots@v1.40.9, Polynomials@v4.0.12, PyCall@v1.96.4, StatsBase@v0.34.3, StatsPlots@v0.15.7, UnPack@v1.0.2, XLSX@v0.10.4, Statistics@v1.11.1, Gurobi@v1.4.0, Kaleido_jll@v0.1, OrderedCollections, StatsBase
 
