@@ -57,13 +57,14 @@ function initialize_run(river::Symbol, start_datetime::String, end_datetime::Str
     results = run_model(river, order_of_expansion, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, 
     price_profile_scenario, theoretical, settings, save_file_name, recalc, save_variables, silent)  
 
-    print_aggregated_results(results) 
-    save_csv && save_results_csv(results, save_file_name)
+    df = make_df(results) 
+    println(df[df.Variable .!= "hourly_power", :])
+    save_csv && CSV.write("$save_file_name.csv", df)
 end 
 
 
 # TODO: save results to csv file 
-function save_results_csv(results, save_file_name) 
+function make_df(results) 
     # Collect column and row names
     outer_keys = collect(keys(results))  # Column names
     inner_keys = collect(union([keys(v) for v in values(results)]...))  # Row names (includes "hourly_power")
@@ -77,9 +78,7 @@ function save_results_csv(results, save_file_name)
         df[!, col_key] = col_data
     end
 
-    # Save to CSV
-    CSV.write("$save_file_name.csv", df)
-
+    return df 
 end 
 
 function print_aggregated_results(results)
