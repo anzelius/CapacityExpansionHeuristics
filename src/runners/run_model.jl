@@ -9,24 +9,47 @@ function run_model(river, order_of_expansion, start_datetime, end_datetime, obje
     
     perform_expansions = isempty(order_of_expansion) ? (push!(order_of_expansion, Dict()); false) : true
     chosen_rivers = river == :All ? rivers : [river] 
-    # can run all rivers, (todo) chosen list of rivers, one river 
+    # TODO: list of chosen rivers 
 
-    results_all = Dict()
+    results_all = Dict()  # expansion_step : aggregated_model_results
     for (step, plants_to_upgrade) in enumerate(order_of_expansion) # List av dicts for each expansion step, lists containing dict of plants to upgrade and by how much 
-        results_expansion_step = Dict()
+        println("========================== $step / $(length(order_of_expansion)) ==========================")
+        results_expansion_step = Dict()  # data_label : model_results  
         for r in chosen_rivers
             expansions = Dict(r => Dict(plant => value for (plant, value) in plants_to_upgrade if haskey(PLANT_DISCHARGES[r], plant))) 
 
-            results = run_model_river(r, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, save_variables=save_variables, 
+            model_results = run_model_river(r, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, save_variables=save_variables, 
             end_start_constraints=theoretical, price_profile_scenario=price_profile_scenario, silent=silent, perform_expansions=perform_expansions,
             expansions=expansions, file_name=save_file_name, recalc=recalc) 
             
-            results_expansion_step[r] = results
+            parse_result(r, model_results, results_expansion_step)
         end
-        results_all[step] = results_expansion_step
+        results_expansion_step["maximum_power"] = maximum(results_expansion_step["hourly_power"])
+        results_all[string(step)] = results_expansion_step
     end
     
     return results_all 
+end 
+
+
+function parse_result(river, model_results, results_expansion_step::Dict)
+
+    if isnothing(model_results) 
+        results_expansion_step["failed_rivers"] = push!(get!(results_expansion_step, "failed_rivers", []), river)
+    else 
+        results, params, num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = model_results
+        @unpack Power_production, rivermodel = results
+        @unpack date_TIME = params 
+
+        power_production_turbines = value.(Power_production) 
+
+        results_expansion_step["hourly_power"] = get!(results_expansion_step, "hourly_power", [0 for _ in date_TIME]) .+ [sum(power_production_turbines[t, :, :]) for t in date_TIME]
+        results_expansion_step["profit"] = get!(results_expansion_step, "profit", 0.0) + round(objective_value(rivermodel), digits=6)
+        results_expansion_step["increased_discharge"] = get!(results_expansion_step, "increased_discharge", 0) + increased_discharge_upgrades + increased_discharge_new_turbines
+        results_expansion_step["new_turbines"] = get!(results_expansion_step, "new_turbines", 0) + num_new_turbines
+        results_expansion_step["upgraded_turbines"] = get!(results_expansion_step, "upgraded_turbines", 0) + num_turbine_upgrades
+        results_expansion_step["upgraded_plants"] = get!(results_expansion_step,"upgraded_plants", 0) + num_upgraded_plants
+    end
 end 
 
 
@@ -46,6 +69,7 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
     run1args = isempty(start) ? run2args : (type=start.type, power=start.power, e=start.e)
     recalcargs = (type=:NLP, power="bilinear HeadE", e="ncv poly rampseg", recalc...)
 
+    num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = 0, 0, 0, 0, 0
     if perform_expansions
         num_new_turbines, num_turbine_upgrades, num_upgraded_plants, increased_discharge_upgrades, increased_discharge_new_turbines = increase_discharge_and_new_turbines(river, expansions) 
     end 

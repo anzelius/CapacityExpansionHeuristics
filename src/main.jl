@@ -8,7 +8,7 @@ include("runners/run_model.jl")
 ###################################
 # Parameters 
 ###################################
-river = :All  # [:All, :Dalälven, :Götaälv, :Indalsälven, :Ljungan, :Ljusnan, :Luleälven, :Skellefteälven, :Umeälven, :Ångermanälven]
+river = :Skellefteälven  # [:All, :Dalälven, :Götaälv, :Indalsälven, :Ljungan, :Ljusnan, :Luleälven, :Skellefteälven, :Umeälven, :Ångermanälven]
 start_datetime = "2016-01-01T08" 
 end_datetime = "2016-01-30T08"  
 objective = "Profit"
@@ -18,15 +18,16 @@ environmental_constraints_scenario = "Dagens miljövillkor"  # ['Dagens miljövi
 expansion_strategy = "Match flow"  # ['None', 'Bottlenecks', 'Match flow', 'New bottlenecks', 'Match flow bottlenecks'] 
 order_metric = :dDxuD  # [:HxD, :dDxuD, (:TopFirst)]
 strict_order = true 
-order_grouping = :step  # [:percentile, :step] 
+order_grouping = :percentile  # [:percentile, :step] 
 order_basis = :aggregated  # [:river, :aggregated]  
-settings = (percentile = 10:10:100, step_size = 10, flow_match="MHQ", flow_scale=0.75, top_plant_scale=1.5, price_factor=0.8, peak_date="2016-01-02T08")
+settings = (percentile = 10:45:100, step_size = 10, flow_match="MHQ", flow_scale=0.75, top_plant_scale=1.5, price_factor=0.8, peak_date="2016-01-02T08")
 
-theoretical = false 
+theoretical = true 
 price_profile_scenario = :none  # [:none, (:dunkelflaute), :peak, :volatility, (:extended)] 
 
-save_file_name = "" 
+save_file_name = "test" 
 save_variables = false
+save_csv = true
 silent = true 
 
 
@@ -56,10 +57,48 @@ function initialize_run(river::Symbol, start_datetime::String, end_datetime::Str
     results = run_model(river, order_of_expansion, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, 
     price_profile_scenario, theoretical, settings, save_file_name, recalc, save_variables, silent)  
 
-    # TODO: saving and printing results 
-    # save results to csv file 
-    # print basic aggregated results 
-    # save aggregated results to fie 
+    print_aggregated_results(results) 
+    save_csv && save_results_csv(results, save_file_name)
+end 
+
+
+# TODO: save results to csv file 
+function save_results_csv(results, save_file_name) 
+    # Collect column and row names
+    outer_keys = collect(keys(results))  # Column names
+    inner_keys = collect(union([keys(v) for v in values(results)]...))  # Row names (includes "hourly_power")
+
+    # Initialize DataFrame with row keys
+    df = DataFrame(Variable = inner_keys)
+
+    # Fill each column
+    for col_key in outer_keys
+        col_data = [get(get(results, col_key, Dict()), row_key, "") for row_key in inner_keys]
+        df[!, col_key] = col_data
+    end
+
+    # Save to CSV
+    CSV.write("$save_file_name.csv", df)
+
+end 
+
+function print_aggregated_results(results)
+    outer_keys = collect(keys(results))          # column names
+    # Row names (excluding "hourly_power")
+    inner_keys = filter(k -> k != "hourly_power", union([keys(v) for v in values(results)]...))
+
+    # Header
+    println(rpad("", 10), join(rpad(k, 12) for k in outer_keys))
+
+    # Rows
+    for row_key in inner_keys
+        row = rpad(row_key, 10)
+        for col_key in outer_keys
+            val = get(get(results, col_key, Dict()), row_key, "")
+            row *= rpad(string(val), 12)
+        end
+        println(row)
+    end
 end 
 
 initialize_run(river, start_datetime, end_datetime, 
