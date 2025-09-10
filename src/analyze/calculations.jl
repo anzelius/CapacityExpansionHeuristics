@@ -1,5 +1,5 @@
-include("constants.jl")
-include("bottlenecks.jl") 
+include("../model/constants.jl")
+include("../identify expansions/strategies/bottlenecks.jl") 
 
 ############################
 # theoretical power calculated P_new = k * Q_new turbine wise, k = P_installed / Q_installed   

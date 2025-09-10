@@ -10,6 +10,7 @@ function merge_expansion_strategy_Steps(plants_to_expand::Dict{Symbol, Vector{Di
 
         plants_to_expand[river] = [merge(+, plants_to_expand[river]...)]  
     end 
+    return plants_to_expand
 end
 
 function merge_river_expansion_steps(plants_to_expand::Dict{Symbol, Vector{Dict{Symbol, Int32}}})
@@ -24,6 +25,6 @@ function merge_river_expansion_steps(plants_to_expand::Dict{Symbol, Vector{Dict{
         end
     end
 
-    plants_to_expand = Dict(:all => merged) 
-    
+    plants_to_expand = Dict(:All => merged) 
+    return plants_to_expand
 end 

@@ -293,10 +293,19 @@ function printbasicresults(params, results; type, power, e, recalculate=false)
         sum_result2 = [sum(powerproduction[t, :, :]) for t in date_TIME]
         println("Recalculated top power (MW): ", maximum(sum_result2))
     end
-    #println("Discharge usage at top power: ")
-    #d = value.(Discharge) 
-    #for p in PPLANT
-    #    println("$p : $(sum(d[top_power_date, p, :]))")
-    #end 
-#sum_d = [sum(d[:, p, :]) for p in PPLANT]
 end
+
+
+function make_df(results) 
+    outer_keys = sort(collect(keys(results)))   # Column names
+    inner_keys = sort(collect(union([keys(v) for v in values(results)]...)))  # Row names 
+
+    df = DataFrame(Variable = inner_keys)
+
+    for col_key in outer_keys
+        col_data = [get(get(results, col_key, Dict()), row_key, "") for row_key in inner_keys]
+        df[!, col_key] = col_data
+    end
+
+    return df 
+end 

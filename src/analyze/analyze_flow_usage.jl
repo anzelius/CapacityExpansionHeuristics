@@ -1,4 +1,4 @@
-include("constants.jl")
+include("../model/constants.jl")
 include("analyze.jl")
 
 
@@ -83,8 +83,6 @@ function check_turbine_flow_usage(path, filename)
         plt = plot(discharge, seriestype=:scatter, title="$river: ($p , $j)")
         display(plt)
         gui(plt) 
-        # :Forshuvud, 2
-        # :Borgärdet, 1
     end 
 end 
 plotlyjs()
@@ -94,7 +92,5 @@ check_turbine_flow_usage(path, filename)
 #plt, bars = flow_usage_one_river(path, filename)
 readline()
 
-#filename = "Bottlenecks yearly 2020 no price peak 2020-01-01T08 to 2020-12-31T08 Profit Linear Dagens miljövillkor.jld2"
-#plt = add_year(path, filename, bars)
 
 

@@ -1,4 +1,4 @@
-include("constants.jl")
+include("../model/constants.jl")
 include("analyze.jl")
 
 # How often is the expanded power capacity utilized? 

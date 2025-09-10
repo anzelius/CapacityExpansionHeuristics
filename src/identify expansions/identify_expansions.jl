@@ -5,9 +5,6 @@ include("strategies/top_plants.jl")
 
 
 function identify_expansions_one_river(river::Symbol, expansion_strategy::String, settings::NamedTuple)
-    #all_expansions = Dict{Symbol, Vector{Dict{Symbol, Int32}}}() # river: [plant : missing discharge] 
-    #connection_graphs = Dict{Symbol, ConnectionsGraph}()  # river : connection graph 
-
     connection_graph = get_connection_graph(river) 
     expansions = identify_expansions(river, connection_graph[river], expansion_strategy, settings)
 
@@ -28,7 +25,7 @@ function identify_expansions_all_rivers(expansion_strategy::String, settings::Na
     return connection_graphs, all_expansions
 end 
 
-# TODO: move to constant fiel 
+# TODO: move to more appropriate file 
 const STRATEGY_COMBOS = Dict(
     "Bottlenecks" => ["Bottlenecks"],
     "Match flow" => ["Match flow"], 
@@ -59,12 +56,4 @@ function identify_expansions(river::Symbol, connection_graph::ConnectionsGraph, 
     return expansions
 end 
 
-#TODO: rewrite 
-function print_bottleneck_stats(river_bottlenecks)
-    n_bottleneck_plants = sum(length(river_bottlenecks[river]) for river in rivers) 
-    println("Total num plants: $NUM_REAL_PLANTS")
-    println("Total num bottlenecks: $n_bottleneck_plants")
-    println("Fraction of bottlenecks: $(n_bottleneck_plants/NUM_REAL_PLANTS)")
-    #return river_bottlenecks
-    #end 
-end 
+

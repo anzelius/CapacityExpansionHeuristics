@@ -1,4 +1,4 @@
-include("constants.jl")
+include("../model/constants.jl")
 include("analyze.jl")
 
 # What is the monthly power production 

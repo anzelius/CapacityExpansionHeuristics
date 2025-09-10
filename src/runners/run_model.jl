@@ -5,7 +5,7 @@ include("../output/output.jl")
 
 
 function run_model(river, order_of_expansion, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, 
-    price_profile_scenario, theoretical, settings, save_file_name, recalc, save_variables, silent)
+    price_profile_scenario, end_start_constraints, settings, save_file_name, recalc, save_variables, silent)
     
     perform_expansions = isempty(order_of_expansion) ? (push!(order_of_expansion, Dict()); false) : true
     chosen_rivers = river == :All ? rivers : [river] 
@@ -19,7 +19,7 @@ function run_model(river, order_of_expansion, start_datetime, end_datetime, obje
             expansions = Dict(r => Dict(plant => value for (plant, value) in plants_to_upgrade if haskey(PLANT_DISCHARGES[r], plant))) 
 
             model_results = run_model_river(r, start_datetime, end_datetime, objective, model, environmental_constraints_scenario, save_variables=save_variables, 
-            end_start_constraints=theoretical, price_profile_scenario=price_profile_scenario, silent=silent, perform_expansions=perform_expansions,
+            end_start_constraints=end_start_constraints, price_profile_scenario=price_profile_scenario, silent=silent, perform_expansions=perform_expansions,
             expansions=expansions, file_name=save_file_name, recalc=recalc) 
             
             parse_result(r, model_results, results_expansion_step)
@@ -85,7 +85,7 @@ function run_model_river(river::Symbol, start_datetime::String, end_datetime::St
                 spot_price[k] = mean_val + scaling_factor*(spot_price[k]-mean_val)
             end
         elseif price_profile_scenario == :peak
-            spot_price[settings.peak_date] = 100000
+            spot_price[DateTime(settings.peak_date)] = 100000
         end
     end 
     

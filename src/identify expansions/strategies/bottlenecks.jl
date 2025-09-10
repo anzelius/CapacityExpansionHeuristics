@@ -2,10 +2,8 @@
 
 
 function reduce_bottlenecks(connections)
-#(connections, river_bottlenecks) = create_connection_graph()
-river_bottlenecks = Dict{Symbol, Int64}()  # river : [Dict(bottleneck plant : missing_discharge), ]
-# dfs in all river networks, mark all bottleneck plants for each river and their diff in discharge 
-# save to global variable? save to file? make function? 
+    river_bottlenecks = Dict{Symbol, Int64}()  # river : [Dict(bottleneck plant : missing_discharge), ]
+
     function check_detour(current_plant::Node, max_discharge_along_river::Int64)
         upstream_plant_names = current_plant.upstream
         detour_nodes = []
@@ -57,7 +55,6 @@ river_bottlenecks = Dict{Symbol, Int64}()  # river : [Dict(bottleneck plant : mi
     end 
 
     dp_max_discharge = Dict{Symbol, Int64}()
-    #plant_bottleneck_value = Dict{Symbol, Float64}() 
     function dfs(current_plant::Node) 
         if isempty(current_plant.upstream) 
             dp_max_discharge[current_plant.name] = 0
@@ -97,10 +94,7 @@ river_bottlenecks = Dict{Symbol, Int64}()  # river : [Dict(bottleneck plant : mi
     end 
 
     dfs(connections.head)  
-    #river_bottlenecks[river] = plant_bottleneck_value
-    #println(river)
-    #println("$(length(river_bottlenecks[river])) / $(length(dp_max_discharge))")
-return river_bottlenecks 
+    return river_bottlenecks 
 end 
 
 

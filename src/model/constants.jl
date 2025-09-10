@@ -60,7 +60,7 @@ DATAFOLDER = begin
         parent(parent(Path(@__DIR__)))
     end
 end
-#DATAFOLDER = "c:/Users/tussa/Desktop/FORSA-Exjobb"
+
 ## Global variables
 PLANTINFO = Dict{Symbol, Vector{Plant}}()
 TURBINEINFO = Dict{Symbol, Vector{Turbine}}()

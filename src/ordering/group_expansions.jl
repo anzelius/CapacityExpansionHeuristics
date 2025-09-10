@@ -20,24 +20,25 @@ function get_upgrades_iteration(all_plants, percentiles)
                 push!(plant_temp, name) 
             end 
         end 
-        #println("Top $p%: ", length(top_percentile_groups[p]))
     end
 
-    #for (p, names) in plant_upgrades_each_iteration
-    #    println("$p: $(length(names))") 
-    #end 
     return plant_upgrades_each_iteration
 end
 
-function get_percentiles(ordered_expansions::OrderedDict{Symbol, Int32}, percentile_levels)
+function get_percentiles(ordered_expansions::OrderedDict{Symbol, Int32}, percentile_levels,  raw)
     # get an ordered dict, shop it up to separate dicts 
-    percentiles = [] 
+    # return a List[Dict(), Dict()] , where Dict(plant : discharge) 
+    plant_upgrades = []
+    included = []
     for p in percentile_levels
-        threshold = percentile(values(ordered_expansions), 100 - p)  
-        plants_in_percentile = Dict(plant => increase_discharge for (plant, increase_discharge) in ordered_expansions if increase_discharge >= threshold)
-        push!(percentiles, plants_in_percentile)
+        threshold = percentile(collect(values(raw)), 100 - p)  
+        plant_names = [name for (name, value) in raw if value >= threshold] 
+        upgrades = Dict(p => ordered_expansions[p] for p in plant_names if p ∉ included)
+        push!(plant_upgrades, upgrades)
+        included = vcat(included, collect(keys(upgrades)))
     end
-    return percentiles 
+
+    return plant_upgrades
 end 
 
 function get_steps(ordered_expansions::OrderedDict{Symbol, Int32}, step_size)
@@ -57,13 +58,16 @@ function get_steps(ordered_expansions::OrderedDict{Symbol, Int32}, step_size)
     return steps
 end 
 
-function group_handler(ordered::Dict{Symbol, Vector{OrderedDict{Symbol, Int32}}}, order_grouping::Symbol, settings::NamedTuple)
+function group_handler(ordered::Dict{Symbol, Vector{OrderedDict{Symbol, Int32}}}, 
+                        raw::Dict{Symbol, Vector{OrderedDict{Symbol, Float64}}},
+                        order_grouping::Symbol, 
+                        settings::NamedTuple)
     expansion_steps = Vector{Dict{Symbol, Int32}}()
 
-    for (river, ordered_expansions) in ordered
-        for ordered_expansion in ordered_expansions
+    for ((river, ordered_expansions), (river, raw_datas)) in zip(ordered, raw)
+        for (ordered_expansion, raw_data) in zip(ordered_expansions, raw_datas)
             if order_grouping == :percentile
-                percentiles = get_percentiles(ordered_expansion, settings.percentile) # percentiles need to be in the form of Dict(), Dict() ... 
+                percentiles = get_percentiles(ordered_expansion, settings.percentile, raw_data) # percentiles need to be in the form of Dict(), Dict() ... 
                 append!(expansion_steps, percentiles)
             elseif order_grouping == :step 
                 steps = get_steps(ordered_expansion, settings.step_size)  # steps need to be in the form of Dict(), Dict() ... Dict containing all plants to upgrade for that step  

@@ -1,4 +1,4 @@
-include("constants.jl")
+include("../model/constants.jl")
 include("analyze.jl")
 
 # How often are the new/upgraded turbines being used? 
