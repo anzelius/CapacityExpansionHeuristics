@@ -1,5 +1,0 @@
-* Add expansion options (new turbines, only upgrades, etc) 
-* topFirst ordering
-* dunkelflaute + extended period price profile 
-* input list of rivers 
-* 🛠️ Program Architecture figure 

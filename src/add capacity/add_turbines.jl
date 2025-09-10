@@ -1,8 +1,5 @@
 using Base: searchsortedfirst
 
-#include("constants.jl")
-#include("bottlenecks.jl") 
-
 # list all turbines in order of max discharge for binary search 
 function get_sorted_turbines()
     sorted_turbines = []
@@ -68,10 +65,7 @@ function build_artificial_effective_discharge_turbine(plant_name, river, missing
     return new_turbine 
 end 
 
-
-# input river_bottlenecks = Dict{Symbol, Dict{Symbol, Int64}}()  
-# river : Dict(bottleneck plant : missing_discharge)
-# river_bottlenecks::Dict{Symbol, Dict{Symbol, Int64}}
+# river_bottlenecks::Dict{Symbol, Dict{Symbol, Int64}}, river : Dict(bottleneck plant : missing_discharge)
 # reduce bottlenecks by adding any type of new turbine matching the required discharge 
 function add_bottleneck_turbines(river, river_bottlenecks)
     num_new_turbines = 0 
@@ -118,10 +112,6 @@ function add_bottleneck_turbines(river, river_bottlenecks)
                         new_turbine_flag = true
                     else 
                         println("FAILED FOR: $missing_discharge")
-                        #nothing 
-                        #println(missing_discharge) #only the ones with -1 
-                        #new_turbine = build_artificial_effective_discharge_turbine(plant_name, river, missing_discharge)
-                        #push!(TURBINEINFO[river], new_turbine)
                     end
                 end 
             end 
@@ -134,11 +124,6 @@ function add_bottleneck_turbines(river, river_bottlenecks)
 end 
 
 function largest_smaller_than_or_equal(target)
-    #idx = searchsortedfirst([t.maxdischarge for t in sorted_turbines], threshold)  
-    #if idx <= length(sorted_list) && sorted_list[idx].maxdischarge == threshold
-    #    return sorted_list[idx]  
-    #end
-    #return idx > 1 ? sorted_list[idx - 1] : nothing  
     sorted_list = get_sorted_turbines()
     left, right = 1, length(sorted_list)
     best_match = nothing  
