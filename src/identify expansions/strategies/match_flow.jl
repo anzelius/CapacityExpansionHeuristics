@@ -10,7 +10,7 @@ function get_flow_values(river::Symbol, method::String, scale)
     plant_values = df[:, "Plant"]  
     read_flow_values = df[:, method] 
     for (plant, hhq) in zip(plant_values, read_flow_values)
-        flow_values[Symbol(plant)] = round(hhq * scale)  
+        flow_values[Symbol(plant)] = round(hhq)  
     end 
     return flow_values
 end 
@@ -28,7 +28,7 @@ function match_flow(river::Symbol, connections::ConnectionsGraph, flow_match, fl
 
         if haskey(flow_values, current_plant.name)
             if flow_values[current_plant.name] > current_plant.discharge
-                expansions[current_plant.name] = flow_values[current_plant.name] - current_plant.discharge
+                expansions[current_plant.name] = round((flow_values[current_plant.name] - current_plant.discharge) * flow_scale)
             end 
         end  
     end 
