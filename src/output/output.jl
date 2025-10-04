@@ -297,7 +297,7 @@ end
 
 
 function make_df(results) 
-    outer_keys = sort(collect(keys(results)))   # Column names
+    outer_keys = sort(collect(keys(results)); by = x -> parse(Int, x)) # Column names
     inner_keys = sort(collect(union([keys(v) for v in values(results)]...)))  # Row names 
 
     df = DataFrame(Variable = inner_keys)
