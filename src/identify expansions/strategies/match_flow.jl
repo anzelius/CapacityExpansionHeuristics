@@ -19,36 +19,13 @@ function match_flow(river::Symbol, connections::ConnectionsGraph, flow_match, fl
     flow_values = get_flow_values(river, flow_match, flow_scale)
     expansions = Dict{Symbol, Int32}()
 
-    visited = Set()
-
-    function match_capacity_flow(current_plant::Node)
-        if !current_plant.is_real_plant
-            return 
-        end
-
-        if haskey(flow_values, current_plant.name)
-            if flow_values[current_plant.name] > current_plant.discharge
-                expansions[current_plant.name] = round((flow_values[current_plant.name] - current_plant.discharge) * flow_scale)
+    for (p, v) in flow_values
+        if haskey(PLANT_DISCHARGES[river], p)
+            if v > PLANT_DISCHARGES[river][p]
+                expansions[p] = round((flow_values[p] - PLANT_DISCHARGES[river][p]) * flow_scale)
             end 
-        end  
+        end
     end 
-
-    function dfs(current_plant::Node)
-        if isempty(current_plant.upstream) 
-            return
-        end 
-
-        for upstream_plant in current_plant.upstream
-            if upstream_plant ∉ visited
-                dfs(connections.nodes[upstream_plant])
-            end
-        end 
-
-        match_capacity_flow(current_plant)
-        push!(visited, current_plant.name)
-    end 
-
-    dfs(connections.head)
 
     return expansions
 end
